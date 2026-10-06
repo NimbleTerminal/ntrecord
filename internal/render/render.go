@@ -36,6 +36,8 @@ type Renderer struct {
 	config                                           tape.Config
 	outputWidth, outputHeight, barHeight             int
 	blinkStart                                       time.Time
+	frame                                            *image.RGBA
+	frameBlinks, frameBlinkOn                        bool
 	term                                             *vt.Terminal
 	state                                            *vt.RenderState
 	rows                                             *vt.RenderStateRowIterator
@@ -98,7 +100,7 @@ func New(c tape.Config) (_ *Renderer, err error) {
 	if c.Height > 0 {
 		r.outputHeight = c.Height
 	}
-	if r.Cols < 1 || r.Rows < 1 || r.outputWidth > 8192 || r.outputHeight > 8192 || r.outputWidth*r.outputHeight > 16*1024*1024 {
+	if r.outputWidth > 8192 || r.outputHeight > 8192 || r.outputWidth*r.outputHeight > 16*1024*1024 {
 		return nil, fmt.Errorf("viewport must contain at least one cell, be <=8192 pixels per side and <=16 megapixels")
 	}
 	r.term, err = vt.NewTerminal(vt.WithSize(uint16(r.Cols), uint16(r.Rows)),
@@ -179,6 +181,7 @@ func (r *Renderer) Close() {
 // Write is the only VT input path. libghostty parses APCs and produces replies
 // through WithWritePty; sigmamax never parses escape protocols a second time.
 func (r *Renderer) Write(b []byte) error {
+	r.frame = nil
 	r.term.VTWrite(b)
 	return r.snapshotImages()
 }
@@ -200,6 +203,7 @@ func (r *Renderer) snapshotImages() error {
 		return err
 	}
 	if kg == nil {
+		r.images = nil
 		return nil
 	}
 	if err := kg.PlacementIterator(r.iter); err != nil {
@@ -289,9 +293,14 @@ type cell struct {
 	placeholder      *placeholderCell
 }
 
+// Frame returns a cached, immutable bitmap. Callers must not modify it.
 func (r *Renderer) Frame() (*image.RGBA, error) { return r.FrameAt(time.Now()) }
 
 func (r *Renderer) FrameAt(now time.Time) (*image.RGBA, error) {
+	blinkOn := now.Sub(r.blinkStart)/(500*time.Millisecond)%2 == 0
+	if r.frame != nil && (!r.frameBlinks || r.frameBlinkOn == blinkOn) {
+		return r.frame, nil
+	}
 	if err := r.state.Update(r.term); err != nil {
 		return nil, err
 	}
@@ -379,7 +388,7 @@ func (r *Renderer) FrameAt(now time.Time) (*image.RGBA, error) {
 	if err != nil {
 		return nil, err
 	}
-	if cursor.Visible && cursor.ViewportHasValue && (!r.config.CursorBlink || !cursor.Blinking || now.Sub(r.blinkStart)/(500*time.Millisecond)%2 == 0) {
+	if cursor.Visible && cursor.ViewportHasValue && (!r.config.CursorBlink || !cursor.Blinking || blinkOn) {
 		x, y := int(cursor.ViewportX)*r.CellWidth, int(cursor.ViewportY)*r.CellHeight
 		rect := image.Rect(x, y, x+r.CellWidth, y+r.CellHeight)
 		switch cursor.VisualStyle {
@@ -396,7 +405,13 @@ func (r *Renderer) FrameAt(now time.Time) (*image.RGBA, error) {
 		draw.Draw(dst, rect, image.NewUniform(color.NRGBA{c.R, c.G, c.B, 150}), image.Point{}, draw.Over)
 	}
 	r.paintImages(dst, placements, 2)
-	return r.decorate(dst, rgb(colors.Background)), r.state.Clean()
+	if err := r.state.Clean(); err != nil {
+		return nil, err
+	}
+	r.frame = r.decorate(dst, rgb(colors.Background))
+	r.frameBlinks = r.config.CursorBlink && cursor.Blinking && cursor.Visible && cursor.ViewportHasValue
+	r.frameBlinkOn = blinkOn
+	return r.frame, nil
 }
 
 func (r *Renderer) paintImages(dst *image.RGBA, placements []placement, layer int) {

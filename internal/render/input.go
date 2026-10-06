@@ -135,6 +135,7 @@ func (r *Renderer) Paste(text string) ([]byte, error) {
 }
 
 func (r *Renderer) Scroll(delta int) error {
+	r.frame = nil
 	r.term.ScrollViewportDelta(delta)
 	return r.snapshotImages()
 }

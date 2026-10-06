@@ -10,6 +10,7 @@ import (
 	"os"
 	"strings"
 	"testing"
+	"time"
 
 	"github.com/NimbleMarkets/sigmamax/internal/tape"
 )
@@ -163,4 +164,52 @@ func TestNativePixelsAndAlpha(t *testing.T) {
 		t.Fatal("PNG alpha not composited")
 	}
 	pixel(t, f, 3, 0, color.RGBA{24, 26, 32, 255})
+}
+
+func TestFrameCacheInvalidation(t *testing.T) {
+	r := newRenderer(t)
+	first := frame(t, r)
+	if got, err := r.FrameAt(time.Now().Add(time.Second)); err != nil || got != first {
+		t.Fatal("idle viewport was redrawn", err)
+	}
+	original := append([]byte(nil), first.Pix...)
+	write(t, r, "hello\r\n")
+	second := frame(t, r)
+	if second == first || bytes.Equal(first.Pix, second.Pix) {
+		t.Fatal("text did not invalidate frame")
+	}
+	if !bytes.Equal(original, first.Pix) {
+		t.Fatal("previous frame was mutated")
+	}
+	write(t, r, strings.Repeat("scroll\r\n", 20))
+	bottom := frame(t, r)
+	if err := r.Scroll(-2); err != nil {
+		t.Fatal(err)
+	}
+	if frame(t, r) == bottom {
+		t.Fatal("scroll did not invalidate frame")
+	}
+	if n := testing.AllocsPerRun(100, func() { _, _ = r.Frame() }); n != 0 {
+		t.Fatalf("idle frame allocations: %v", n)
+	}
+}
+
+func TestImageCopiesReleasedOnReset(t *testing.T) {
+	r := newRenderer(t)
+	b, err := os.ReadFile("testdata/kitty.apc")
+	if err != nil {
+		t.Fatal(err)
+	}
+	write(t, r, string(b))
+	if len(r.images) == 0 {
+		t.Fatal("fixture not cached")
+	}
+	withImage := frame(t, r)
+	write(t, r, "\x1bc")
+	if len(r.images) != 0 || len(r.placements) != 0 {
+		t.Fatal("reset retained image copies")
+	}
+	if frame(t, r) == withImage {
+		t.Fatal("reset retained frame")
+	}
 }
