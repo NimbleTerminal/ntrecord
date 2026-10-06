@@ -1,0 +1,123 @@
+version: '3'
+
+vars:
+  GHOSTTY_PREFIX: '{{.GHOSTTY_PREFIX | default (printf "%s/.deps/libghostty-vt" .ROOT_DIR)}}'
+
+env:
+  CGO_ENABLED: '1'
+  GHOSTTY_PREFIX: '{{.GHOSTTY_PREFIX}}'
+  PKG_CONFIG: '{{.PKG_CONFIG | default (printf "%s/scripts/pkg-config.sh" .ROOT_DIR)}}'
+  PKG_CONFIG_PATH: '{{.GHOSTTY_PREFIX}}/share/pkgconfig{{if .PKG_CONFIG_PATH}}:{{.PKG_CONFIG_PATH}}{{end}}'
+
+tasks:
+  default:
+    cmds: [task: build]
+  list:
+    desc: List available tasks
+    cmds: [task --list]
+  deps:
+    desc: Bootstrap pinned Zig/pkgconf and build libghostty-vt locally (pass build flags after --)
+    cmds: ['sh scripts/build-libghostty.sh {{.CLI_ARGS}}']
+  native-check:
+    internal: true
+    run: once
+    cmds:
+      - 'if ! "$PKG_CONFIG" --exists --static libghostty-vt-static 2>/dev/null; then sh scripts/build-libghostty.sh; fi'
+  build:
+    desc: Build bin/sigmamax
+    deps: [native-check]
+    # Let Go handle caching: native libraries, compiler flags, and workspace
+    # dependencies can change outside Task's source globs.
+    cmds: [go build -mod=readonly -trimpath -o bin/sigmamax .]
+  run:
+    desc: Run sigmamax (pass a tape path or CLI arguments after --)
+    interactive: true
+    deps: [build]
+    cmds: ['bin/sigmamax {{.CLI_ARGS}}']
+  record:
+    desc: Record a live PTY (pass recorder flags and command after --)
+    interactive: true
+    deps: [build]
+    cmds: ['bin/sigmamax record {{.CLI_ARGS}}']
+  install:
+    desc: Install sigmamax into the Go bin directory
+    deps: [native-check]
+    cmds: [go install -mod=readonly -trimpath .]
+  clean:
+    desc: Remove binaries and Task state (keep dependencies and recordings)
+    cmds: [rm -rf bin .task]
+  clean:all:
+    desc: Also remove project-local tools, native libraries, downloads, and Zig caches
+    cmds:
+      - task: clean
+      - rm -rf .deps
+  fmt:
+    desc: Format Go sources
+    cmds: [gofmt -w main.go integration_test.go internal examples]
+  fmt-check:
+    desc: Check Go formatting
+    cmds:
+      - 'files=$(gofmt -l main.go integration_test.go internal examples); if [ -n "$files" ]; then printf "%s\n" "$files"; exit 1; fi'
+  go-tidy:
+    desc: Tidy module dependencies
+    cmds: [go mod tidy]
+  go-tidy-check:
+    cmds: [go mod tidy -diff]
+  go-verify:
+    cmds: [go mod verify]
+  test:
+    desc: Run tests (pass go test flags after --)
+    deps: [native-check]
+    cmds: ['go test -mod=readonly {{.CLI_ARGS}} ./...']
+  video-check:
+    internal: true
+    preconditions:
+      - sh: command -v ffmpeg && command -v ffprobe
+        msg: 'Video tests require FFmpeg (macOS: brew install ffmpeg; Debian/Ubuntu: sudo apt-get install ffmpeg).'
+  test:video:
+    desc: Require FFmpeg and run video encoder and PTY integration tests
+    deps: [native-check, video-check]
+    env:
+      SIGMAMAX_REQUIRE_FFMPEG: '1'
+    cmds: ['go test -mod=readonly {{.CLI_ARGS}} . ./internal/encode']
+  test-race:
+    desc: Run tests with race detection
+    deps: [native-check]
+    cmds: ['go test -mod=readonly -race {{.CLI_ARGS}} ./...']
+  vet:
+    desc: Run Go static checks
+    deps: [native-check]
+    cmds: [go vet -mod=readonly ./...]
+  ci:
+    desc: Run the same checks as GitHub Actions
+    cmds:
+      - task: fmt-check
+      - task: go-tidy-check
+      - task: go-verify
+      - task: test-race
+      - task: vet
+      - task: build
+  demo:kitty:
+    desc: Record examples/kitty.gif (direct PNG with a query handshake)
+    deps: [build]
+    cmds: [bin/sigmamax examples/kitty.tape]
+  demo:text:
+    desc: Record examples/text.gif
+    deps: [build]
+    cmds: [bin/sigmamax examples/text.tape]
+  demo:placeholder:
+    desc: Record examples/kitty-placeholder.gif (ntcharts-style Unicode placements)
+    deps: [build]
+    cmds: [bin/sigmamax examples/kitty-placeholder.tape]
+  demos:
+    desc: Record the example GIFs
+    cmds:
+      - task: demo:kitty
+      - task: demo:text
+      - task: demo:placeholder
+  demo:video:
+    desc: Record Kitty graphics to MP4 and WebM (requires FFmpeg)
+    deps: [build, video-check]
+    cmds:
+      - bin/sigmamax examples/kitty-mp4.tape
+      - bin/sigmamax examples/kitty-webm.tape

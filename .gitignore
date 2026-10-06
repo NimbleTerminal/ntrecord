@@ -1,0 +1,9 @@
+/sigmamax
+.DS_Store
+*.gif
+*.mp4
+*.webm
+.sigmamax-*
+/.deps/
+/bin/
+/.task/

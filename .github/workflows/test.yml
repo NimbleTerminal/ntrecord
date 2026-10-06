@@ -1,0 +1,44 @@
+name: test
+on: [push, pull_request]
+jobs:
+  test:
+    timeout-minutes: 30
+    env:
+      SIGMAMAX_REQUIRE_FFMPEG: '1'
+    strategy:
+      matrix:
+        os: [ubuntu-latest, macos-latest]
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-go@v5
+        with:
+          go-version-file: go.mod
+      - uses: go-task/setup-task@v1
+        with:
+          version: 3.54.0
+      - name: Install video test dependencies (Linux)
+        if: runner.os == 'Linux'
+        run: sudo apt-get update && sudo apt-get install -y ffmpeg
+      - name: Install video test dependencies (macOS)
+        if: runner.os == 'macOS'
+        run: brew list ffmpeg >/dev/null 2>&1 || brew install ffmpeg
+      # Exercise the user's first-build path. No preinstalled Zig/pkg-config
+      # or native cache is required; archives are pinned and SHA-256 checked.
+      - run: task clean:all
+      - run: task build
+      - run: task ci
+      - run: task demos
+      - run: task demo:video
+      - name: Check clean and rebuild
+        run: |
+          task clean
+          test ! -e bin/sigmamax
+          task build
+      - uses: actions/upload-artifact@v4
+        with:
+          name: demos-${{ matrix.os }}
+          path: |
+            examples/*.gif
+            examples/*.mp4
+            examples/*.webm
