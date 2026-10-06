@@ -15,6 +15,11 @@ import (
 )
 
 func main() {
+	// A closed stdout pipe must return EPIPE so Run can save captured frames.
+	// Notify also leaves the normal SIGPIPE disposition for exec'd children.
+	sigpipe := make(chan os.Signal, 1)
+	signal.Notify(sigpipe, syscall.SIGPIPE)
+	defer signal.Stop(sigpipe)
 	if err := run(os.Args[1:]); err != nil {
 		fmt.Fprintln(os.Stderr, "sigmamax:", err)
 		os.Exit(1)
@@ -23,7 +28,7 @@ func main() {
 
 func run(args []string) error {
 	if len(args) == 0 || args[0] == "-h" || args[0] == "--help" {
-		fmt.Println("Usage: sigmamax <file.tape>\n       sigmamax record [-o recording.gif] [-cols 80] [-rows 24] [-font-size 18] [-- command args...]")
+		fmt.Println("Usage: sigmamax <file.tape>\n       sigmamax record [-o output] [-shell executable] [-cols n] [-rows n] [-font-size pixels] [-- command args...]")
 		return nil
 	}
 	ctx, stop := signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGTERM)
@@ -31,11 +36,11 @@ func run(args []string) error {
 	opts := record.Options{Config: tape.DefaultConfig()}
 	if args[0] == "record" {
 		fs := flag.NewFlagSet("record", flag.ContinueOnError)
-		fs.StringVar(&opts.Config.Output, "o", "recording.gif", "output (.gif, .mp4, .webm, .txt, .ascii, or frames/; video requires ffmpeg)")
-		fs.StringVar(&opts.Config.Shell, "shell", "/bin/sh", "interactive shell executable")
-		fs.IntVar(&opts.Config.Cols, "cols", 80, "PTY columns")
-		fs.IntVar(&opts.Config.Rows, "rows", 24, "PTY rows")
-		fs.Float64Var(&opts.Config.FontSize, "font-size", 18, "font size in pixels")
+		fs.StringVar(&opts.Config.Output, "o", opts.Config.Output, "output (.gif, .mp4, .webm, .txt, .ascii, or frames/; video requires ffmpeg)")
+		fs.StringVar(&opts.Config.Shell, "shell", opts.Config.Shell, "interactive shell executable")
+		fs.IntVar(&opts.Config.Cols, "cols", opts.Config.Cols, "PTY columns")
+		fs.IntVar(&opts.Config.Rows, "rows", opts.Config.Rows, "PTY rows")
+		fs.Float64Var(&opts.Config.FontSize, "font-size", opts.Config.FontSize, "font size in pixels")
 		if err := fs.Parse(args[1:]); err != nil {
 			if errors.Is(err, flag.ErrHelp) {
 				return nil

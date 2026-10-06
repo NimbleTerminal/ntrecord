@@ -201,3 +201,37 @@ func TestRecordExitAndCancellation(t *testing.T) {
 		})
 	}
 }
+
+// Run the real main entry point in a subprocess so Go's special handling of
+// SIGPIPE on stdout is exercised, rather than only a synthetic Writer error.
+func TestBrokenStdoutStillSavesGIF(t *testing.T) {
+	if os.Getenv("SIGMAMAX_MAIN_HELPER") == "1" {
+		os.Args = []string{"sigmamax", "record", "-o", os.Getenv("SIGMAMAX_TEST_OUTPUT"), "-cols", "20", "-rows", "3", "--", "/bin/sh", "-c", "printf 'first\\n'; sleep 0.2; printf 'second\\n'; sleep 2"}
+		main()
+		os.Exit(0)
+	}
+	path := filepath.Join(t.TempDir(), "pipe.gif")
+	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	defer cancel()
+	cmd := exec.CommandContext(ctx, os.Args[0], "-test.run=^TestBrokenStdoutStillSavesGIF$")
+	cmd.Env = append(os.Environ(), "SIGMAMAX_MAIN_HELPER=1", "SIGMAMAX_TEST_OUTPUT="+path)
+	stdout, err := cmd.StdoutPipe()
+	if err != nil {
+		t.Fatal(err)
+	}
+	var stderr bytes.Buffer
+	cmd.Stderr = &stderr
+	if err = cmd.Start(); err != nil {
+		t.Fatal(err)
+	}
+	b := make([]byte, 32)
+	if _, err = stdout.Read(b); err != nil {
+		t.Fatal(err)
+	}
+	stdout.Close()
+	err = cmd.Wait()
+	if err == nil || !strings.Contains(stderr.String(), "broken pipe") {
+		t.Fatalf("expected EPIPE, got %v: %s", err, stderr.String())
+	}
+	readGIF(t, path)
+}

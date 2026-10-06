@@ -1,6 +1,8 @@
 package record
 
 import (
+	"context"
+	"errors"
 	"fmt"
 	"image"
 	"io"
@@ -39,13 +41,12 @@ func newOutputs(c tape.Config, r *render.Renderer) (*outputs, error) {
 	}
 	return o, nil
 }
-func (o *outputs) Add(frame *image.RGBA, d time.Duration) error {
+func (o *outputs) Add(ctx context.Context, frame *image.RGBA, d time.Duration) error {
+	var errs []error
 	for _, e := range o.encoders {
-		if err := e.Add(frame, d); err != nil {
-			return err
-		}
+		errs = append(errs, e.AddContext(ctx, frame, d))
 	}
-	return nil
+	return errors.Join(errs...)
 }
 func (o *outputs) Text(r *render.Renderer) error {
 	if !o.needsText {
@@ -55,20 +56,18 @@ func (o *outputs) Text(r *render.Renderer) error {
 	if err != nil {
 		return err
 	}
+	var errs []error
 	for _, e := range o.encoders {
-		if err = e.AddText(text); err != nil {
-			return err
-		}
+		errs = append(errs, e.AddText(text))
 	}
-	return nil
+	return errors.Join(errs...)
 }
 func (o *outputs) Finish() error {
+	var errs []error
 	for _, e := range o.encoders {
-		if err := e.Finish(); err != nil {
-			return err
-		}
+		errs = append(errs, e.Finish())
 	}
-	return nil
+	return errors.Join(errs...)
 }
 func (o *outputs) Abort() {
 	for _, e := range o.encoders {

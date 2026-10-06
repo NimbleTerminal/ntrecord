@@ -6,7 +6,6 @@ import (
 	"fmt"
 	"image"
 	"image/png"
-	"io"
 	"math"
 	"os"
 	"os/exec"
@@ -52,7 +51,8 @@ type Encoder struct {
 	width, height   int
 	gif             *gifencode.Encoder
 	cmd             *exec.Cmd
-	stdin           io.WriteCloser
+	stdin           *os.File
+	failure         error
 	stderr          errorLog
 	elapsed         time.Duration
 	frames          int64
@@ -151,9 +151,17 @@ func NewWithOptions(path string, width, height int, opts Options) (*Encoder, err
 	e.cmd.SysProcAttr = &syscall.SysProcAttr{Setpgid: true}
 	e.cmd.Stderr = &e.stderr
 	e.cmd.WaitDelay = 5 * time.Second
-	e.stdin, err = e.cmd.StdinPipe()
+	// Own the pipe explicitly: deadline support is a requirement, not an
+	// optional type assertion on exec's io.WriteCloser.
+	var reader *os.File
+	reader, e.stdin, err = os.Pipe()
 	if err == nil {
-		err = e.cmd.Start()
+		err = e.stdin.SetWriteDeadline(time.Time{})
+		if err == nil {
+			e.cmd.Stdin = reader
+			err = e.cmd.Start()
+		}
+		_ = reader.Close()
 	}
 	if err != nil {
 		e.Abort()
@@ -163,6 +171,19 @@ func NewWithOptions(path string, width, height int, opts Options) (*Encoder, err
 }
 
 func (e *Encoder) Add(frame *image.RGBA, duration time.Duration) error {
+	return e.AddContext(context.Background(), frame, duration)
+}
+
+// AddContext interrupts a blocked video write when recording is cancelled.
+// A partial raw frame cannot be finalized safely; that video fails while
+// independent output formats can still be saved.
+func (e *Encoder) AddContext(ctx context.Context, frame *image.RGBA, duration time.Duration) error {
+	if e.failure != nil {
+		return e.failure
+	}
+	if err := ctx.Err(); err != nil {
+		return err
+	}
 	if frame.Bounds().Dx() != e.width || frame.Bounds().Dy() != e.height {
 		return fmt.Errorf("frame dimensions changed during recording")
 	}
@@ -174,6 +195,21 @@ func (e *Encoder) Add(frame *image.RGBA, duration time.Duration) error {
 	}
 	if e.file != nil {
 		return nil
+	}
+	if e.stdin != nil {
+		if err := e.stdin.SetWriteDeadline(time.Now().Add(30 * time.Second)); err != nil {
+			return err
+		}
+		interrupted := make(chan struct{})
+		stop := context.AfterFunc(ctx, func() {
+			_ = e.stdin.SetWriteDeadline(time.Now())
+			close(interrupted)
+		})
+		defer func() {
+			if !stop() {
+				<-interrupted
+			}
+		}()
 	}
 	e.elapsed += duration
 	// Round cumulative time, avoiding drift from rounding each sample. Repeat
@@ -196,13 +232,14 @@ func (e *Encoder) Add(frame *image.RGBA, duration time.Duration) error {
 			e.frames++
 			continue
 		}
-		if f, ok := e.stdin.(*os.File); ok {
-			_ = f.SetWriteDeadline(time.Now().Add(30 * time.Second))
-		}
 		if err := e.writeFrame(frame); err != nil {
 			// Reap before reading stderr, which exec writes asynchronously.
 			e.stop()
-			return fmt.Errorf("write FFmpeg frame: %w: %s", err, e.stderr.String())
+			if ctx.Err() != nil {
+				err = ctx.Err()
+			}
+			e.failure = fmt.Errorf("write FFmpeg frame: %w: %s", err, e.stderr.String())
+			return e.failure
 		}
 		e.frames++
 	}
@@ -235,6 +272,9 @@ func (e *Encoder) AddText(s string) error {
 }
 
 func (e *Encoder) Finish() error {
+	if e.failure != nil {
+		return e.failure
+	}
 	if e.format == "frames" {
 		if e.frames == 0 {
 			return fmt.Errorf("recording has no visible frames")

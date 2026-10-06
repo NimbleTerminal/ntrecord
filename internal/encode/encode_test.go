@@ -2,7 +2,9 @@ package encode
 
 import (
 	"bytes"
+	"context"
 	"encoding/json"
+	"errors"
 	"image"
 	"image/color"
 	"image/draw"
@@ -152,5 +154,51 @@ func TestVideoEmptyAndAbort(t *testing.T) {
 		if len(files) != 0 {
 			t.Fatalf("leaked output: %v", files)
 		}
+	}
+}
+
+// The fake codec advertises support but never consumes stdin. Cancellation
+// must unblock an in-flight pipe write, reap it, and leave the old file intact.
+func TestStalledVideoWriteCancellation(t *testing.T) {
+	dir := t.TempDir()
+	script := "#!/bin/sh\nif [ \"$2\" = -encoders ]; then echo ' V..... libx264 fake'; exit 0; fi\nexec /bin/sleep 60\n"
+	if err := os.WriteFile(filepath.Join(dir, "ffmpeg"), []byte(script), 0755); err != nil {
+		t.Fatal(err)
+	}
+	t.Setenv("PATH", dir)
+	path := filepath.Join(dir, "out.mp4")
+	if err := os.WriteFile(path, []byte("old recording"), 0644); err != nil {
+		t.Fatal(err)
+	}
+	e, err := New(path, 1024, 1024)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer e.Abort()
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+	done := make(chan error, 1)
+	go func() { done <- e.AddContext(ctx, image.NewRGBA(image.Rect(0, 0, 1024, 1024)), time.Second) }()
+	select {
+	case err := <-done:
+		t.Fatalf("write did not block: %v", err)
+	case <-time.After(100 * time.Millisecond):
+	}
+	cancel()
+	select {
+	case err := <-done:
+		if !errors.Is(err, context.Canceled) {
+			t.Fatal(err)
+		}
+	case <-time.After(3 * time.Second):
+		t.Fatal("cancelled video write hung")
+	}
+	if err := e.Finish(); !errors.Is(err, context.Canceled) {
+		t.Fatalf("Finish after failed write: %v", err)
+	}
+	e.Abort()
+	b, err := os.ReadFile(path)
+	if err != nil || string(b) != "old recording" {
+		t.Fatalf("destination changed: %q %v", b, err)
 	}
 }

@@ -187,6 +187,13 @@ sequences do not produce false matches. Default scope is `Line`, timeout is
 pattern for reliable application readiness; output echoed while typing can also
 match a broad regex. Timeout errors report the pattern and last observed text.
 
+Tape controls are ordered after already-queued PTY output. `Hide` captures the
+last visible viewport, including during synchronized output; `Show` resumes from
+the current viewport. Neither waits for a running command to finish: use `Wait`
+before a visibility change when command completion matters. At the end of a
+successful tape, output drains until 100ms of silence, up to one second. Use
+`Wait` or `Sleep` for commands that need longer.
+
 | Setting | Values / default |
 | --- | --- |
 | `Shell` | Executable name or path, started with `-i`; default `/bin/sh` |
@@ -240,7 +247,11 @@ recording and saves captured frames. The original terminal mode is restored on
 exit. It does not attach to an unrelated, already-running process.
 
 The recorded viewport remains fixed at the requested size. Child exit failures
-are returned after saving the recording. GIF holds unique paletted frames in
+and output-forwarding errors (including a closed stdout pipe) are returned after
+attempting to save every recording output. FFmpeg writes have a 30-second deadline
+and are interrupted by cancellation. A failed or interrupted video stream cannot
+always be saved; other output formats are finalized independently, and an existing
+destination is replaced only after successful encoding. GIF holds unique paletted frames in
 memory with a 512 MiB limit; keep GIF recordings reasonably short. Video streams
 frames to FFmpeg as they are captured, without accumulating them in Go memory. Viewports are
 limited to 8192 pixels per side and 16 megapixels.
