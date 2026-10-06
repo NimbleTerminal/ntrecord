@@ -47,8 +47,8 @@ func (e *Encoder) Add(frame *image.RGBA, duration time.Duration) error {
 		return fmt.Errorf("recording exceeds 512 MiB of unique GIF frames; use a smaller viewport or shorter session")
 	}
 	colors := append(color.Palette(nil), palette.Plan9...)
-	// Preserve the default background and foreground exactly.
-	colors[254], colors[255] = color.RGBA{24, 26, 32, 255}, color.RGBA{224, 228, 235, 255}
+	// Preserve default colors without replacing pure black (0) or white (255).
+	colors[253], colors[254] = color.RGBA{24, 26, 32, 255}, color.RGBA{224, 228, 235, 255}
 	p := image.NewPaletted(frame.Bounds(), colors)
 	draw.FloydSteinberg.Draw(p, p.Bounds(), frame, frame.Bounds().Min)
 	e.bytes += int64(len(p.Pix))
