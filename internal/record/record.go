@@ -5,20 +5,21 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"image/png"
 	"io"
 	"os"
 	"os/exec"
+	"path/filepath"
+	"regexp"
 	"strings"
 	"syscall"
 	"time"
+	"unicode/utf8"
 
-	"github.com/NimbleMarkets/sigmamax/internal/encode"
 	"github.com/NimbleMarkets/sigmamax/internal/render"
 	"github.com/NimbleMarkets/sigmamax/internal/tape"
 	"github.com/creack/pty"
 )
-
-const framePeriod = encode.FramePeriod
 
 type Options struct {
 	Config  tape.Config
@@ -35,8 +36,8 @@ type output struct {
 	err  error
 }
 type control struct {
-	command string
-	ack     chan struct{}
+	action tape.Action
+	ack    chan error
 }
 
 func Run(parent context.Context, opts Options) error {
@@ -45,7 +46,25 @@ func Run(parent context.Context, opts Options) error {
 		return err
 	}
 	defer r.Close()
-	encoder, err := encode.New(opts.Config.Output, r.Width, r.Height)
+	rate := opts.Config.Framerate
+	if rate == 0 {
+		rate = 20
+	}
+	speed := opts.Config.PlaybackSpeed
+	if speed == 0 {
+		speed = 1
+	}
+	period := time.Duration(float64(time.Second) / rate)
+	env := environment(os.Environ())
+	for key, value := range opts.Config.Env {
+		env = replaceEnv(env, key, value)
+	}
+	for _, program := range opts.Config.Require {
+		if _, err := lookPath(program, env); err != nil {
+			return fmt.Errorf("Require %s: %w", program, err)
+		}
+	}
+	encoder, err := newOutputs(opts.Config, r)
 	if err != nil {
 		return err
 	}
@@ -56,8 +75,12 @@ func Run(parent context.Context, opts Options) error {
 	if len(args) == 0 {
 		args = []string{opts.Config.Shell, "-i"}
 	}
-	cmd := exec.Command(args[0], args[1:]...)
-	cmd.Env = environment(os.Environ())
+	executable, err := lookPath(args[0], env)
+	if err != nil {
+		return err
+	}
+	cmd := exec.Command(executable, args[1:]...)
+	cmd.Env = env
 	ptmx, err := pty.StartWithSize(cmd, &pty.Winsize{Cols: uint16(r.Cols), Rows: uint16(r.Rows), X: uint16(r.Width), Y: uint16(r.Height)})
 	if err != nil {
 		return fmt.Errorf("start PTY: %w", err)
@@ -158,12 +181,35 @@ func Run(parent context.Context, opts Options) error {
 		}
 		d := now.Sub(last)
 		last = now
-		return encoder.Add(frame, d)
+		return encoder.Add(frame, time.Duration(float64(d)/speed))
 	}
-	ticker := time.NewTicker(framePeriod)
+	ticker := time.NewTicker(period)
 	defer ticker.Stop()
 	finished := false
 	var runErr error
+	var pending *control
+	var waitDeadline <-chan time.Time
+	var waitTimer *time.Timer
+	defer func() {
+		if waitTimer != nil {
+			waitTimer.Stop()
+		}
+	}()
+	var waitRE *regexp.Regexp
+	checkWait := func() {
+		if pending == nil {
+			return
+		}
+		text, err := r.Text(pending.action.Scope)
+		if err != nil || waitRE.MatchString(text) {
+			pending.ack <- err
+			pending = nil
+			waitDeadline = nil
+			if waitTimer != nil {
+				waitTimer.Stop()
+			}
+		}
+	}
 	for !finished {
 		select {
 		case o := <-read:
@@ -184,6 +230,7 @@ func Run(parent context.Context, opts Options) error {
 					}
 				}
 			}
+			checkWait()
 			if o.err != nil {
 				if !errors.Is(o.err, io.EOF) && !errors.Is(o.err, syscall.EIO) {
 					runErr = o.err
@@ -200,14 +247,64 @@ func Run(parent context.Context, opts Options) error {
 				finished = true
 			}
 		case c := <-controls:
-			if c.command == "Hide" && visible {
-				if err := capture(time.Now(), false); err != nil {
-					return err
+			a := c.action
+			var actionErr error
+			var input []byte
+			switch a.Command {
+			case "Hide", "Show":
+				if a.Command == "Hide" && visible {
+					actionErr = capture(time.Now(), false)
+				}
+				visible = a.Command == "Show"
+				last = time.Now()
+			case "Checkpoint":
+				if visible {
+					actionErr = encoder.Text(r)
+				}
+			case "Wait":
+				pending = &c
+				waitRE = regexp.MustCompile(a.Text)
+				waitTimer = time.NewTimer(a.Duration)
+				waitDeadline = waitTimer.C
+				checkWait()
+				continue
+			case "Screenshot":
+				var frameErr error
+				frame, frameErr := r.Frame()
+				if frameErr != nil {
+					actionErr = frameErr
+				} else {
+					actionErr = writeAtomic(a.Text, func(w io.Writer) error { return png.Encode(w, frame) })
+				}
+			case "Text":
+				cp, _ := utf8.DecodeRuneInString(a.Text)
+				input, actionErr = r.TypeRune(cp)
+			case "Paste":
+				input, actionErr = r.Paste(a.Text)
+			case "ScrollUp":
+				actionErr = r.Scroll(-1)
+			case "ScrollDown":
+				actionErr = r.Scroll(1)
+			default:
+				input, actionErr = r.Key(a.Command)
+			}
+			if actionErr == nil && len(input) > 0 {
+				select {
+				case writes <- input:
+				case <-ctx.Done():
+					actionErr = ctx.Err()
 				}
 			}
-			visible = c.command == "Show"
-			last = time.Now()
-			close(c.ack)
+			c.ack <- actionErr
+		case <-waitDeadline:
+			text, _ := r.Text(pending.action.Scope)
+			if len(text) > 500 {
+				text = text[len(text)-500:]
+			}
+			pending.ack <- fmt.Errorf("Wait+%s timed out after %s waiting for /%s/; last text: %q", pending.action.Scope, pending.action.Duration, pending.action.Text, text)
+			pending = nil
+			waitDeadline = nil
+
 		case err := <-scriptDone:
 			runErr = err
 			finished = true
@@ -224,77 +321,97 @@ func Run(parent context.Context, opts Options) error {
 		}
 	}
 	// A client may exit during a hold. Still finalize its last viewport.
-	if err := capture(time.Now().Add(framePeriod), true); err != nil {
+	if err := capture(time.Now().Add(period), true); err != nil {
 		return err
 	}
+	if visible {
+		if err := encoder.Text(r); err != nil {
+			return errors.Join(runErr, err)
+		}
+	}
 	if err := encoder.Finish(); err != nil {
-		return err
+		return errors.Join(runErr, err)
 	}
 	return runErr
 }
 
 func play(ctx context.Context, actions []tape.Action, writes chan<- []byte, controls chan<- control) error {
 	wait := func(d time.Duration) error {
-		t := time.NewTimer(d)
-		defer t.Stop()
+		if d == 0 {
+			return ctx.Err()
+		}
+		timer := time.NewTimer(d)
+		defer timer.Stop()
 		select {
-		case <-t.C:
+		case <-timer.C:
 			return nil
 		case <-ctx.Done():
 			return ctx.Err()
 		}
 	}
-	write := func(b []byte) error {
+	control := func(a tape.Action) error {
+		c := control{action: a, ack: make(chan error, 1)}
 		select {
-		case writes <- b:
-			return nil
+		case controls <- c:
+		case <-ctx.Done():
+			return ctx.Err()
+		}
+		select {
+		case err := <-c.ack:
+			return err
 		case <-ctx.Done():
 			return ctx.Err()
 		}
 	}
 	started := false
+	clipboard := ""
 	for _, a := range actions {
-		// Apply leading Hide immediately; allow the shell to initialize before
-		// the first input, without leaking hidden setup into an initial frame.
 		if !started && a.Command != "Hide" && a.Command != "Show" {
 			if err := wait(100 * time.Millisecond); err != nil {
-				return err
+				return a.Error(err)
 			}
 			started = true
 		}
+		var err error
 		switch a.Command {
 		case "Type":
 			for _, ch := range a.Text {
-				if err := write([]byte(string(ch))); err != nil {
-					return err
+				input := a
+				input.Command = "Text"
+				input.Text = string(ch)
+				if err = control(input); err != nil {
+					break
 				}
-				if err := wait(25 * time.Millisecond); err != nil {
-					return err
+				if err = wait(a.Interval); err != nil {
+					break
 				}
-			}
-		case "Enter":
-			if err := write([]byte{'\r'}); err != nil {
-				return err
-			}
-			if err := wait(100 * time.Millisecond); err != nil {
-				return err
 			}
 		case "Sleep":
-			if err := wait(a.Duration); err != nil {
-				return err
+			err = wait(a.Duration)
+		case "Copy":
+			clipboard = a.Text
+		case "Paste":
+			a.Text = clipboard
+			err = control(a)
+		case "Wait", "Screenshot", "Hide", "Show":
+			err = control(a)
+		default:
+			for range max(a.Count, 1) {
+				if err = control(a); err != nil {
+					break
+				}
+				if err = wait(a.Interval); err != nil {
+					break
+				}
 			}
-		case "Hide", "Show":
-			c := control{a.Command, make(chan struct{})}
-			select {
-			case controls <- c:
-			case <-ctx.Done():
-				return ctx.Err()
-			}
-			select {
-			case <-c.ack:
-			case <-ctx.Done():
-				return ctx.Err()
-			}
+		}
+		if err == nil {
+			checkpoint := a
+			checkpoint.Command = "Checkpoint"
+			err = control(checkpoint)
+		}
+		if err != nil {
+			return a.Error(err)
 		}
 	}
 	return nil
@@ -311,4 +428,34 @@ func environment(base []string) []string {
 		env = append(env, s)
 	}
 	return append(env, "TERM=xterm-256color", "COLORTERM=truecolor", "TERM_PROGRAM=sigmamax", "TERM_PROGRAM_VERSION=0.1", "PS1=$ ", "PS2=> ")
+}
+
+func replaceEnv(env []string, key, value string) []string {
+	prefix := key + "="
+	for i, s := range env {
+		if strings.HasPrefix(s, prefix) {
+			env[i] = prefix + value
+			return env
+		}
+	}
+	return append(env, prefix+value)
+}
+
+func lookPath(name string, env []string) (string, error) {
+	if strings.ContainsRune(name, '/') {
+		return exec.LookPath(name)
+	}
+	path := ""
+	for _, s := range env {
+		if strings.HasPrefix(s, "PATH=") {
+			path = strings.TrimPrefix(s, "PATH=")
+		}
+	}
+	for _, dir := range filepath.SplitList(path) {
+		candidate := filepath.Join(dir, name)
+		if info, err := os.Stat(candidate); err == nil && !info.IsDir() && info.Mode()&0111 != 0 {
+			return filepath.Abs(candidate)
+		}
+	}
+	return "", fmt.Errorf("executable %q not found in recording PATH", name)
 }

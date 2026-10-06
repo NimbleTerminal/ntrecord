@@ -7,6 +7,7 @@ import (
 	"image"
 	"image/color"
 	"image/draw"
+	"math"
 	"sort"
 	"sync"
 	"time"
@@ -32,6 +33,9 @@ type cachedImage struct {
 }
 
 type Renderer struct {
+	config                                           tape.Config
+	outputWidth, outputHeight, barHeight             int
+	blinkStart                                       time.Time
 	term                                             *vt.Terminal
 	state                                            *vt.RenderState
 	rows                                             *vt.RenderStateRowIterator
@@ -52,28 +56,49 @@ func New(c tape.Config) (_ *Renderer, err error) {
 	if !(c.FontSize >= 6 && c.FontSize <= 96) {
 		return nil, fmt.Errorf("font size must be between 6 and 96")
 	}
-	r := &Renderer{}
+	r := &Renderer{config: c, blinkStart: time.Now()}
+	if c.WindowBar != "" && c.WindowBar != "none" {
+		r.barHeight = c.WindowBarSize
+	}
+	extrasX := 2 * (c.Padding + c.Margin)
+	extrasY := extrasX + r.barHeight
 	defer func() {
 		if err != nil {
 			r.Close()
 		}
 	}()
-	if r.atlas, err = newAtlas(c.FontSize); err != nil {
+	if r.atlas, err = newAtlasFamily(c.FontSize, c.FontFamily); err != nil {
 		return nil, err
 	}
-	r.CellWidth, r.CellHeight = r.atlas.width, r.atlas.height
+	lineHeight := c.LineHeight
+	if lineHeight == 0 {
+		lineHeight = 1
+	}
+	r.CellWidth = int(math.Ceil(float64(r.atlas.width) + c.LetterSpacing))
+	r.CellHeight = int(math.Ceil(float64(r.atlas.height) * lineHeight))
+	if r.CellWidth < 1 || r.CellHeight < 1 {
+		return nil, fmt.Errorf("font spacing leaves no room for a cell")
+	}
+	r.atlas.ascent += (r.CellHeight - r.atlas.height) / 2
 	r.Cols, r.Rows = c.Cols, c.Rows
 	if c.Width != 0 {
-		r.Cols = c.Width / r.CellWidth
+		r.Cols = (c.Width - extrasX) / r.CellWidth
 	}
 	if c.Height != 0 {
-		r.Rows = c.Height / r.CellHeight
+		r.Rows = (c.Height - extrasY) / r.CellHeight
 	}
 	if r.Cols < 1 || r.Cols > 8192 || r.Rows < 1 || r.Rows > 8192 {
 		return nil, fmt.Errorf("grid dimensions must be between 1 and 8192")
 	}
 	r.Width, r.Height = r.Cols*r.CellWidth, r.Rows*r.CellHeight
-	if r.Cols < 1 || r.Rows < 1 || r.Width > 8192 || r.Height > 8192 || r.Width*r.Height > 16*1024*1024 {
+	r.outputWidth, r.outputHeight = r.Width+extrasX, r.Height+extrasY
+	if c.Width > 0 {
+		r.outputWidth = c.Width
+	}
+	if c.Height > 0 {
+		r.outputHeight = c.Height
+	}
+	if r.Cols < 1 || r.Rows < 1 || r.outputWidth > 8192 || r.outputHeight > 8192 || r.outputWidth*r.outputHeight > 16*1024*1024 {
 		return nil, fmt.Errorf("viewport must contain at least one cell, be <=8192 pixels per side and <=16 megapixels")
 	}
 	r.term, err = vt.NewTerminal(vt.WithSize(uint16(r.Cols), uint16(r.Rows)),
@@ -106,6 +131,12 @@ func New(c tape.Config) (_ *Renderer, err error) {
 		return nil, err
 	}
 	if err = r.term.SetColorForeground(&fg); err != nil {
+		return nil, err
+	}
+	if err = r.applyTheme(c); err != nil {
+		return nil, err
+	}
+	if err = r.term.SetDefaultCursorBlink(&c.CursorBlink); err != nil {
 		return nil, err
 	}
 	// File, tempfile and shared-memory transports are disabled by default.
@@ -258,7 +289,9 @@ type cell struct {
 	placeholder      *placeholderCell
 }
 
-func (r *Renderer) Frame() (*image.RGBA, error) {
+func (r *Renderer) Frame() (*image.RGBA, error) { return r.FrameAt(time.Now()) }
+
+func (r *Renderer) FrameAt(now time.Time) (*image.RGBA, error) {
 	if err := r.state.Update(r.term); err != nil {
 		return nil, err
 	}
@@ -346,7 +379,7 @@ func (r *Renderer) Frame() (*image.RGBA, error) {
 	if err != nil {
 		return nil, err
 	}
-	if cursor.Visible && cursor.ViewportHasValue {
+	if cursor.Visible && cursor.ViewportHasValue && (!r.config.CursorBlink || !cursor.Blinking || now.Sub(r.blinkStart)/(500*time.Millisecond)%2 == 0) {
 		x, y := int(cursor.ViewportX)*r.CellWidth, int(cursor.ViewportY)*r.CellHeight
 		rect := image.Rect(x, y, x+r.CellWidth, y+r.CellHeight)
 		switch cursor.VisualStyle {
@@ -363,7 +396,7 @@ func (r *Renderer) Frame() (*image.RGBA, error) {
 		draw.Draw(dst, rect, image.NewUniform(color.NRGBA{c.R, c.G, c.B, 150}), image.Point{}, draw.Over)
 	}
 	r.paintImages(dst, placements, 2)
-	return dst, r.state.Clean()
+	return r.decorate(dst, rgb(colors.Background)), r.state.Clean()
 }
 
 func (r *Renderer) paintImages(dst *image.RGBA, placements []placement, layer int) {

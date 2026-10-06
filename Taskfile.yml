@@ -121,3 +121,7 @@ tasks:
     cmds:
       - bin/sigmamax examples/kitty-mp4.tape
       - bin/sigmamax examples/kitty-webm.tape
+  demo:language:
+    desc: Record the VHS language demo, text checkpoints, and PNG screenshot
+    deps: [build]
+    cmds: [bin/sigmamax examples/language.tape]

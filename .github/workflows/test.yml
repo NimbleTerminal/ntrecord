@@ -29,6 +29,7 @@ jobs:
       - run: task build
       - run: task ci
       - run: task demos
+      - run: task demo:language
       - run: task demo:video
       - name: Check clean and rebuild
         run: |
@@ -42,3 +43,5 @@ jobs:
             examples/*.gif
             examples/*.mp4
             examples/*.webm
+            examples/language.png
+            examples/language.txt

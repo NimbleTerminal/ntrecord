@@ -5,10 +5,13 @@ import (
 	"context"
 	"fmt"
 	"image"
+	"image/png"
 	"io"
+	"math"
 	"os"
 	"os/exec"
 	"path/filepath"
+	"strconv"
 	"strings"
 	"syscall"
 	"time"
@@ -20,17 +23,31 @@ const FramePeriod = 50 * time.Millisecond
 
 // Format validates the output extension without requiring external tools.
 func Format(path string) (string, error) {
+	if strings.HasSuffix(path, "/") {
+		return "frames", nil
+	}
 	switch ext := strings.ToLower(filepath.Ext(path)); ext {
-	case ".gif", ".mp4", ".webm":
+	case ".gif", ".mp4", ".webm", ".txt", ".ascii", ".test":
 		return ext[1:], nil
 	default:
-		return "", fmt.Errorf("unsupported output %q: use .gif, .mp4, or .webm", path)
+		return "", fmt.Errorf("unsupported output %q: use .gif, .mp4, .webm, .txt, .ascii, or a frame directory ending in /", path)
 	}
 }
 
 // Encoder owns its temporary output and subprocess. Call Abort on every path;
 // Finish atomically publishes the completed file and makes Abort a no-op.
+type Options struct {
+	Framerate  float64
+	LoopOffset string
+}
+
 type Encoder struct {
+	format          string
+	period          time.Duration
+	loopOffset      string
+	file            *os.File
+	previousText    string
+	hasText         bool
 	path, temporary string
 	width, height   int
 	gif             *gifencode.Encoder
@@ -42,6 +59,13 @@ type Encoder struct {
 }
 
 func New(path string, width, height int) (*Encoder, error) {
+	return NewWithOptions(path, width, height, Options{Framerate: 20})
+}
+
+func NewWithOptions(path string, width, height int, opts Options) (*Encoder, error) {
+	if opts.Framerate < 1 || opts.Framerate > 120 || math.IsNaN(opts.Framerate) || math.IsInf(opts.Framerate, 0) {
+		return nil, fmt.Errorf("framerate must be between 1 and 120")
+	}
 	format, err := Format(path)
 	if err != nil {
 		return nil, err
@@ -49,7 +73,29 @@ func New(path string, width, height int) (*Encoder, error) {
 	if width < 1 || height < 1 {
 		return nil, fmt.Errorf("invalid frame dimensions %dx%d", width, height)
 	}
-	e := &Encoder{path: path, width: width, height: height}
+	e := &Encoder{path: filepath.Clean(path), width: width, height: height, format: format, period: time.Duration(float64(time.Second) / opts.Framerate), loopOffset: opts.LoopOffset}
+	switch format {
+	case "txt", "ascii", "test":
+		e.file, err = e.tempFile()
+		if err != nil {
+			return nil, err
+		}
+		return e, nil
+	case "frames":
+		if files, er := os.ReadDir(e.path); er == nil && len(files) > 0 {
+			return nil, fmt.Errorf("frame directory %q must be empty or absent", e.path)
+		} else if er != nil && !os.IsNotExist(er) {
+			return nil, er
+		}
+		if err = os.MkdirAll(filepath.Dir(e.path), 0755); err != nil {
+			return nil, err
+		}
+		e.temporary, err = os.MkdirTemp(filepath.Dir(e.path), ".sigmamax-frames-*")
+		if err != nil {
+			return nil, err
+		}
+		return e, nil
+	}
 	if format == "gif" {
 		e.gif = &gifencode.Encoder{}
 		return e, nil
@@ -89,7 +135,7 @@ func New(path string, width, height int) (*Encoder, error) {
 	}
 	args := []string{"-hide_banner", "-loglevel", "error", "-nostdin", "-y",
 		"-f", "rawvideo", "-pixel_format", "rgba", "-video_size", fmt.Sprintf("%dx%d", width, height),
-		"-framerate", fmt.Sprint(int(time.Second / FramePeriod)), "-i", "pipe:0", "-an",
+		"-framerate", strconv.FormatFloat(opts.Framerate, 'f', -1, 64), "-i", "pipe:0", "-an",
 		// yuv420p requires even dimensions. Preserve the viewport and pad only
 		// its right/bottom edges when necessary, rather than rescaling text.
 		"-vf", "pad=ceil(iw/2)*2:ceil(ih/2)*2", "-pix_fmt", "yuv420p", "-c:v", codec, "-threads", "2"}
@@ -126,11 +172,30 @@ func (e *Encoder) Add(frame *image.RGBA, duration time.Duration) error {
 	if e.gif != nil {
 		return e.gif.Add(frame, duration)
 	}
+	if e.file != nil {
+		return nil
+	}
 	e.elapsed += duration
 	// Round cumulative time, avoiding drift from rounding each sample. Repeat
 	// held frames on the fixed 20 FPS timeline; the codec compresses duplicates.
-	target := int64((e.elapsed + FramePeriod/2) / FramePeriod)
+	target := int64((e.elapsed + e.period/2) / e.period)
 	for e.frames < target {
+		if e.format == "frames" {
+			f, err := os.Create(filepath.Join(e.temporary, fmt.Sprintf("%06d.png", e.frames+1)))
+			if err != nil {
+				return err
+			}
+			err = png.Encode(f, frame)
+			closeErr := f.Close()
+			if err != nil {
+				return err
+			}
+			if closeErr != nil {
+				return closeErr
+			}
+			e.frames++
+			continue
+		}
 		if f, ok := e.stdin.(*os.File); ok {
 			_ = f.SetWriteDeadline(time.Now().Add(30 * time.Second))
 		}
@@ -157,11 +222,59 @@ func (e *Encoder) writeFrame(frame *image.RGBA) error {
 	return nil
 }
 
+func (e *Encoder) AddText(s string) error {
+	if e.file == nil || e.hasText && s == e.previousText {
+		return nil
+	}
+	if _, err := fmt.Fprintln(e.file, s+"\n"+strings.Repeat("─", 80)); err != nil {
+		return err
+	}
+	e.previousText = s
+	e.hasText = true
+	return nil
+}
+
 func (e *Encoder) Finish() error {
-	if e.gif != nil {
+	if e.format == "frames" {
+		if e.frames == 0 {
+			return fmt.Errorf("recording has no visible frames")
+		}
+		// Only replace an empty directory, never erase existing frames.
+		if info, err := os.Stat(e.path); err == nil && info.IsDir() {
+			if err = os.Remove(e.path); err != nil {
+				return err
+			}
+		}
+		if err := os.Rename(e.temporary, e.path); err != nil {
+			return err
+		}
+		e.temporary = ""
+		return nil
+	}
+	if e.file != nil {
+		if err := e.file.Close(); err != nil {
+			return err
+		}
+		if !e.hasText {
+			return fmt.Errorf("recording has no visible frames")
+		}
+	} else if e.gif != nil {
 		f, err := e.tempFile()
 		if err != nil {
 			return err
+		}
+		if e.loopOffset != "" {
+			var fraction float64
+			if strings.HasSuffix(e.loopOffset, "%") {
+				v, _ := strconv.ParseFloat(strings.TrimSuffix(e.loopOffset, "%"), 64)
+				fraction = v / 100
+			} else {
+				n, _ := strconv.ParseFloat(e.loopOffset, 64)
+				if e.gif.Duration() > 0 {
+					fraction = n * float64(e.period) / float64(e.gif.Duration())
+				}
+			}
+			e.gif.Rotate(fraction)
 		}
 		err = e.gif.Encode(f)
 		closeErr := f.Close()
@@ -220,8 +333,15 @@ func (e *Encoder) stop() {
 
 func (e *Encoder) Abort() {
 	e.stop()
+	if e.file != nil {
+		_ = e.file.Close()
+	}
 	if e.temporary != "" {
-		_ = os.Remove(e.temporary)
+		if e.format == "frames" {
+			_ = os.RemoveAll(e.temporary)
+		} else {
+			_ = os.Remove(e.temporary)
+		}
 		e.temporary = ""
 	}
 }

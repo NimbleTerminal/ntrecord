@@ -6,12 +6,7 @@ import (
 	"image/draw"
 
 	"golang.org/x/image/font"
-	"golang.org/x/image/font/gofont/gomono"
-	"golang.org/x/image/font/gofont/gomonobold"
-	"golang.org/x/image/font/gofont/gomonobolditalic"
-	"golang.org/x/image/font/gofont/gomonoitalic"
 	"golang.org/x/image/font/opentype"
-	"golang.org/x/image/font/sfnt"
 	"golang.org/x/image/math/fixed"
 )
 
@@ -27,14 +22,15 @@ type atlas struct {
 	width, height, ascent int
 }
 
-func newAtlas(size float64) (*atlas, error) {
+func newAtlas(size float64) (*atlas, error) { return newAtlasFamily(size, "Go Mono") }
+
+func newAtlasFamily(size float64, family string) (*atlas, error) {
 	a := &atlas{glyphs: make(map[glyphKey]*image.RGBA)}
-	for i, data := range [][]byte{gomono.TTF, gomonobold.TTF, gomonoitalic.TTF, gomonobolditalic.TTF} {
-		parsed, err := sfnt.Parse(data)
-		if err != nil {
-			a.close()
-			return nil, err
-		}
+	fonts, err := fontFaces(family)
+	if err != nil {
+		return nil, err
+	}
+	for i, parsed := range fonts {
 		a.faces[i], err = opentype.NewFace(parsed, &opentype.FaceOptions{Size: size, DPI: 72, Hinting: font.HintingFull})
 		if err != nil {
 			a.close()

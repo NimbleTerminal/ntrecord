@@ -69,3 +69,32 @@ func (e *Encoder) Encode(w io.Writer) error {
 	e.gif.LoopCount = 0
 	return gif.EncodeAll(w, &e.gif)
 }
+
+// Duration is the encoded timeline after centisecond rounding.
+func (e *Encoder) Duration() time.Duration { return time.Duration(e.ticks) * 10 * time.Millisecond }
+
+// Rotate starts the loop at a timeline fraction, splitting a held frame when
+// needed so deduplication does not change the meaning of LoopOffset.
+func (e *Encoder) Rotate(fraction float64) {
+	if fraction <= 0 || fraction >= 1 || len(e.gif.Image) == 0 {
+		return
+	}
+	offset := int(float64(e.ticks) * fraction)
+	for i, d := range e.gif.Delay {
+		if offset >= d {
+			offset -= d
+			continue
+		}
+		frames := append([]*image.Paletted(nil), e.gif.Image[i:]...)
+		delays := append([]int(nil), e.gif.Delay[i:]...)
+		delays[0] -= offset
+		frames = append(frames, e.gif.Image[:i]...)
+		delays = append(delays, e.gif.Delay[:i]...)
+		if offset > 0 {
+			frames = append(frames, e.gif.Image[i])
+			delays = append(delays, offset)
+		}
+		e.gif.Image, e.gif.Delay = frames, delays
+		return
+	}
+}

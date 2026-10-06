@@ -7,3 +7,6 @@
 /.deps/
 /bin/
 /.task/
+
+/examples/language.png
+/examples/language.txt

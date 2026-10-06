@@ -31,7 +31,7 @@ func run(args []string) error {
 	opts := record.Options{Config: tape.DefaultConfig()}
 	if args[0] == "record" {
 		fs := flag.NewFlagSet("record", flag.ContinueOnError)
-		fs.StringVar(&opts.Config.Output, "o", "recording.gif", "output file (.gif, .mp4, or .webm; video requires ffmpeg)")
+		fs.StringVar(&opts.Config.Output, "o", "recording.gif", "output (.gif, .mp4, .webm, .txt, .ascii, or frames/; video requires ffmpeg)")
 		fs.StringVar(&opts.Config.Shell, "shell", "/bin/sh", "interactive shell executable")
 		fs.IntVar(&opts.Config.Cols, "cols", 80, "PTY columns")
 		fs.IntVar(&opts.Config.Rows, "rows", 24, "PTY rows")
@@ -54,12 +54,7 @@ func run(args []string) error {
 		if len(args) != 1 {
 			return fmt.Errorf("expected one tape path")
 		}
-		f, err := os.Open(args[0])
-		if err != nil {
-			return err
-		}
-		t, err := tape.Parse(f)
-		_ = f.Close()
+		t, err := tape.ParseFile(args[0])
 		if err != nil {
 			return err
 		}
@@ -69,6 +64,8 @@ func run(args []string) error {
 	if err != nil {
 		return err
 	}
-	fmt.Fprintln(os.Stderr, "Wrote", opts.Config.Output)
+	for _, path := range opts.Config.Destinations() {
+		fmt.Fprintln(os.Stderr, "Wrote", path)
+	}
 	return nil
 }
