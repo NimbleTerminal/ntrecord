@@ -1,0 +1,37 @@
+baseURL = "https://nimblemarkets.github.io/sigmamax/"
+title = "sigmamax"
+theme = "hugo-book"
+contentDir = "content"
+
+# Disable auto-generated timestamps for reproducible builds
+enableGitInfo = false
+
+[params]
+  description = "Record a terminal session to GIF, MP4, or WebM, including Kitty graphics"
+
+  # hugo-book theme params
+  BookTheme = "auto"
+  # The table of contents takes a column of the page. The theme lets a page
+  # turn it off but not on, so it is on here, and pages too short to want
+  # one say bookToC: false in their front matter.
+  BookToC = true
+  BookSection = "*"
+  BookRepo = "https://github.com/NimbleMarkets/sigmamax"
+  BookEditPath = "edit/main/docs/hugo"
+  BookDateFormat = "January 2, 2006"
+  BookSearch = true
+  BookComments = false
+
+[markup]
+  [markup.goldmark]
+    [markup.goldmark.renderer]
+      unsafe = true
+  [markup.tableOfContents]
+    endLevel = 4
+    ordered = false
+    startLevel = 2
+
+[outputs]
+  home = ["HTML", "RSS"]
+  section = ["HTML"]
+  page = ["HTML"]

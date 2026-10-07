@@ -127,6 +127,26 @@ and the all-commands fixture. End-to-end tests exercise real PTY input, waits,
 clipboard paste, screenshots, text checkpoints, and multiple outputs. Upstream
 fixtures and theme data retain Charm's MIT license and theme author metadata.
 
+## User guide site
+
+The user guide is a [Hugo](https://gohugo.io) site in `docs/hugo`, using the
+[hugo-book](https://github.com/alex-shpak/hugo-book) theme as a git submodule and
+the Nimble brand styling shared with the gloss docs. The pages in
+`docs/hugo/content/guide` are written for people using sigmamax; the files
+beside this one (`tapes.md`, `rendering.md`, this page) are the reference.
+
+```sh
+git submodule update --init   # once: fetch the theme
+task docs:hugo:serve          # live preview (needs hugo, extended)
+task docs:hugo:build          # build into docs/hugo/public
+```
+
+A new guide page needs a `title` and `weight` in its front matter and a link
+from `docs/hugo/content/guide/_index.md`. The `pages` workflow builds the site on
+pull requests that touch it and deploys it to GitHub Pages from `main`.
+Keep the guide to what a user needs; put detail in the reference pages and link
+to it.
+
 ## Releases and Homebrew
 
 Like gloss, GoReleaser publishes archives/checksums to GitHub Releases and a

@@ -138,6 +138,18 @@ tasks:
     deps: [build]
     cmds: [bin/sigmamax examples/language.tape]
 
+  docs:hugo:serve:
+    desc: Serve the user guide while editing it (needs hugo, extended; run `git submodule update --init` once)
+    dir: docs/hugo
+    cmds: [hugo serve]
+  docs:hugo:build:
+    desc: Build the user guide into docs/hugo/public (pass hugo flags after --)
+    dir: docs/hugo
+    cmds: ['hugo --minify {{.CLI_ARGS}}']
+  docs:clean:
+    desc: Remove the built user guide
+    cmds: [rm -rf docs/hugo/public docs/hugo/resources]
+
   release:
     desc: Package a snapshot in dist on macOS, publishing nothing
     env:

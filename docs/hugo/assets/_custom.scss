@@ -1,0 +1,160 @@
+// The Nimble brand on the docs: the six brand colors and white, Open Sans
+// Condensed for headings and SemiCondensed for text, as the gloss docs wear.
+//   purple #3F3080 / #655BA7   red #E24F36   teal #4495AA   mint #A7D7B1   yellow #FBF4A5
+
+$ink: #3f3080;
+$muted: #655ba7;
+$red: #e24f36;
+$teal: #4495aa;
+$mint: #a7d7b1;
+$yellow: #fbf4a5;
+
+@font-face {
+  font-family: "Nimble Head";
+  src: url(fonts/OpenSans-CondensedBold.ttf) format("truetype");
+  font-weight: 700;
+  font-display: swap;
+}
+@font-face {
+  font-family: "Nimble Body";
+  src: url(fonts/OpenSans-SemiCondensed.ttf) format("truetype");
+  font-weight: 400;
+  font-display: swap;
+}
+@font-face {
+  font-family: "Nimble Body";
+  src: url(fonts/OpenSans-SemiCondensedSemiBold.ttf) format("truetype");
+  font-weight: 600 800;
+  font-display: swap;
+}
+
+// Light: white pages and purple ink.
+@mixin theme-light {
+  --body-background: #fff;
+  --body-background-tint: none;
+  --body-font-color: #{$ink};
+
+  --color-link: #{$muted};
+  --color-visited-link: #{$ink};
+
+  --icon-filter: none;
+
+  --gray-100: #{mix($mint, #fff, 22%)};
+  // Hairlines in the muted purple: mint on white is too faint to read as a line.
+  --gray-200: #{mix($muted, #fff, 50%)};
+  --gray-500: #{$muted};
+
+  --wordmark-glyph: #{$ink};
+  --name-link: #{$red};
+
+  @include accent("default", $muted);
+  @include accent("note", $teal);
+  @include accent("tip", $mint);
+  @include accent("important", $ink);
+  @include accent("warning", $yellow);
+  @include accent("caution", $red);
+  @include accent("info", $teal);
+  @include accent("success", $mint);
+  @include accent("danger", $red);
+}
+
+// Dark: the guide's purple, with white text and yellow links.
+@mixin theme-dark {
+  --body-background: #{$ink};
+  --body-background-tint: none;
+  --body-font-color: #fff;
+
+  --color-link: #{$yellow};
+  --color-visited-link: #{$mint};
+
+  --icon-filter: brightness(0) invert(1);
+
+  --gray-100: #{mix($muted, $ink, 40%)};
+  --gray-200: #{$muted};
+  --gray-500: #{$mint};
+
+  --wordmark-glyph: #{$yellow};
+  // Red on the purple is under 3:1; the yellow of the links reads.
+  --name-link: #{$yellow};
+
+  @include accent("default", $muted);
+  @include accent("note", $teal);
+  @include accent("tip", $mint);
+  @include accent("important", $yellow);
+  @include accent("warning", $yellow);
+  @include accent("caution", $red);
+  @include accent("info", $teal);
+  @include accent("success", $mint);
+  @include accent("danger", $red);
+}
+
+html,
+body {
+  font-family: "Nimble Body", system-ui, sans-serif;
+}
+
+body {
+  // A teal rule across the top.
+  border-top: 3px solid $teal;
+}
+
+h1,
+h2,
+h3,
+h4,
+.book-brand,
+.markdown th {
+  font-family: "Nimble Head", system-ui, sans-serif;
+  font-weight: 700;
+  letter-spacing: 0;
+}
+
+.markdown a {
+  text-underline-offset: 3px;
+}
+
+// The wordmark: red "sigmamax" and its glyph.
+.book-brand {
+  font-size: 1.75rem;
+  line-height: 1;
+  a {
+    text-decoration: none;
+  }
+  .wordmark {
+    color: $red;
+    span {
+      color: var(--wordmark-glyph);
+      padding-left: 0.3em;
+    }
+  }
+}
+
+// Search is a pill, and code blocks are a terminal's dark canvas.
+.book-search input {
+  border-radius: 999px;
+}
+.markdown .highlight pre,
+.markdown pre {
+  background-color: #1e1e1e !important;
+  // Text of a block with no highlighting (a usage line) is the terminal's, not the page's ink.
+  color: #f0f0f0;
+}
+
+// The names a table lists in its first column (the domains of the command
+// reference) are links in the accent color, set heavier so they read as names.
+.markdown td:first-child > a {
+  color: var(--name-link);
+  font-weight: 600;
+}
+
+// A table's head is ruled in the brand red, heavier than the hairlines of its
+// body, so the weight of the line carries the structure.
+.markdown table thead th {
+  border-bottom: 2px solid $red;
+}
+
+// Option and key names in a table never break across lines: "--projection"
+// stays whole, and the Description column gives way instead.
+.markdown td code {
+  white-space: nowrap;
+}
