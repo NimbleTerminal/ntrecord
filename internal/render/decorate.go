@@ -1,6 +1,7 @@
 package render
 
 import (
+	"fmt"
 	"image"
 	"image/color"
 	"image/draw"
@@ -136,4 +137,28 @@ func (r *Renderer) decorate(src *image.RGBA, bg color.RGBA) *image.RGBA {
 		}
 	}
 	return dst
+}
+
+// TerminalColors returns the initial colors used in a portable cast header.
+func (r *Renderer) TerminalColors() (foreground, background string, palette []string, err error) {
+	fg, err := r.term.ColorForeground()
+	if err != nil {
+		return "", "", nil, err
+	}
+	bg, err := r.term.ColorBackground()
+	if err != nil {
+		return "", "", nil, err
+	}
+	colors, err := r.term.ColorPalette()
+	if err != nil {
+		return "", "", nil, err
+	}
+	hex := func(c vt.ColorRGB) string { return fmt.Sprintf("#%02x%02x%02x", c.R, c.G, c.B) }
+	if fg == nil || bg == nil {
+		return "", "", nil, fmt.Errorf("terminal has no default colors")
+	}
+	for _, c := range colors[:16] {
+		palette = append(palette, hex(c))
+	}
+	return hex(*fg), hex(*bg), palette, nil
 }

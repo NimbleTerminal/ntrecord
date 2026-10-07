@@ -41,6 +41,7 @@ type Options struct {
 type output struct {
 	data []byte
 	err  error
+	at   time.Time
 }
 type control struct {
 	action tape.Action
@@ -75,6 +76,9 @@ const (
 )
 
 func Run(parent context.Context, opts Options) error {
+	if err := validateCast(opts.Config, opts.Tape); err != nil {
+		return err
+	}
 	virtual := opts.Config.Mode == tape.Deterministic
 	if virtual && opts.Tape == nil {
 		return errors.New("deterministic mode needs a tape: a live recording follows a person's clock")
@@ -131,6 +135,7 @@ func Run(parent context.Context, opts Options) error {
 	if err != nil {
 		return fmt.Errorf("start PTY: %w", err)
 	}
+	castStart := time.Now()
 	exit := make(chan struct{})
 	var exitErr error
 	go func() { exitErr = cmd.Wait(); close(exit) }()
@@ -141,7 +146,7 @@ func Run(parent context.Context, opts Options) error {
 		buf := make([]byte, 32*1024)
 		for {
 			n, err := ptmx.Read(buf)
-			o := output{data: append([]byte(nil), buf[:n]...), err: err}
+			o := output{data: append([]byte(nil), buf[:n]...), err: err, at: time.Now()}
 			select {
 			case events <- event{output: o}:
 			case <-ctx.Done():
@@ -221,6 +226,10 @@ func Run(parent context.Context, opts Options) error {
 	visible := true
 	last := time.Now()
 	capture := func(captureCtx context.Context, now time.Time, final bool) error {
+		if len(encoder.encoders) == 0 {
+			last = now
+			return nil
+		}
 		if !visible {
 			last = now
 			return nil
@@ -248,6 +257,12 @@ func Run(parent context.Context, opts Options) error {
 	var recorded time.Duration
 	var lastEmitted *image.RGBA // the last frame held, to notice a program drawing after the tape ends
 	emit := func(captureCtx context.Context, d time.Duration) error {
+		if len(encoder.encoders) == 0 {
+			if visible {
+				recorded += d
+			}
+			return captureCtx.Err()
+		}
 		for d > 0 && visible {
 			step := d
 			if opts.Config.CursorBlink {
@@ -403,7 +418,12 @@ func Run(parent context.Context, opts Options) error {
 					if settle != nil {
 						settleQuietT.Reset(settleQuiet)
 					}
-					err := r.Write(o.data)
+					at := recorded
+					if !virtual {
+						at = time.Duration(float64(o.at.Sub(castStart)) / speed)
+					}
+					castErr := encoder.Output(at, o.data)
+					err := errors.Join(castErr, r.Write(o.data))
 					if reply := r.TakeReplies(); len(reply) > 0 {
 						err = errors.Join(err, enqueue(writeRequest{data: reply}))
 					}
@@ -570,6 +590,10 @@ func Run(parent context.Context, opts Options) error {
 	}
 	if visible {
 		runErr = errors.Join(runErr, encoder.Text(r))
+	}
+	encoder.castTime = recorded
+	if !virtual {
+		encoder.castTime = time.Duration(float64(time.Since(castStart)) / speed)
 	}
 	return errors.Join(runErr, encoder.Finish())
 }

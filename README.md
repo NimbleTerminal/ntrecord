@@ -1,6 +1,6 @@
 # sigmamax
 
-Record a terminal session to GIF, MP4, or WebM, including Kitty graphics.
+Record a terminal session to GIF, MP4, WebM, or asciicast, including Kitty graphics.
 
 sigmamax runs your program on a real PTY, passes its output to libghostty-vt (the terminal engine from Ghostty), and draws every frame itself in Go. No browser, screen capture, or window is involved. It reads [VHS](https://github.com/charmbracelet/vhs) tape scripts, but it is not a fork of VHS.
 
@@ -37,6 +37,7 @@ The file extension picks the format, for both a tape's `Output` and `record -o`.
 
 | Extension | Result | Needs |
 | --- | --- | --- |
+| `.cast` | Asciicast v3 terminal events, including inline Kitty graphics | None beyond sigmamax |
 | `.gif` | Animated GIF (256 colors, with the theme's own colors kept exact) | nothing |
 | `.mp4` | H.264 video (`libx264`, CRF 18, fast-start) | FFmpeg |
 | `.webm` | VP9 video (`libvpx-vp9`, CRF 30) | FFmpeg |
@@ -48,6 +49,51 @@ FFmpeg must be on `PATH` and built with the encoder for the format. sigmamax che
 Video is made from the same frames as GIF, piped straight into FFmpeg's [raw-video input](https://ffmpeg.org/ffmpeg-formats.html#rawvideo) with no intermediate files. It is silent and uses `yuv420p` for wide playback support, so small colored text can look slightly softer. Odd sizes are padded by one pixel on the right and bottom. Hidden time is left out, and the duration is rounded to the frame interval (`Framerate`; 50 ms at the default 20 FPS).
 
 Output goes to a temporary file next to the destination and is renamed only after encoding succeeds, so a failed recording never replaces an existing file. Encoder errors include FFmpeg's own message. If the encoder is slow, the PTY is sampled less often, but the elapsed visible time is kept.
+
+## Asciicast recording and rendering
+
+Save terminal events to a standard `.cast` file, then render it without rerunning
+the recorded commands:
+
+```sh
+sigmamax record -o session.cast -- sh -c 'printf "hello\n"; sleep 2'
+sigmamax render session.cast -o session.gif
+sigmamax render session.cast -o session.mp4 -fps 30 -speed 2
+sigmamax render session.cast -o frames/ -font-size 24
+```
+
+The writer uses [asciicast v3](https://docs.asciinema.org/manual/asciicast/v3/);
+`render` reads v2 and v3. Casts preserve timed terminal output, grid size, initial
+colors, inline Kitty image data, and trailing silence. They stream to disk rather
+than storing frames. A tape may combine `Output session.cast` with other outputs;
+its realtime or deterministic clock and `PlaybackSpeed` also apply to the cast.
+
+`render` uses the existing terminal renderer and supports GIF, MP4, WebM, PNG
+frame directories, and a final text screen. It runs offline without a PTY or shell.
+Use `-font`, `-font-size`, `-theme`, `-fps`, `-speed`, and `-cursor-blink` to control
+the result. The default is Go Mono at 18 pixels and the cast's initial colors.
+Timing is sampled at the selected frame rate; final output gets at least one frame.
+An interactive viewer is not included yet.
+
+Initial limits:
+
+- Cast output rejects tapes with `Hide`, `ScrollUp`, or `ScrollDown` before
+  execution. Dropping hidden bytes would lose terminal state; saving them would
+  expose the hidden content. Viewport scrolling is a renderer operation.
+- Rendering uses the initial fixed grid and rejects size-changing resize events.
+  Input and unknown events are ignored while retaining their timing. Recorded
+  idle time is preserved; the optional `idle_time_limit` hint is not applied.
+- Kitty support is the same [direct-transport subset](docs/rendering.md) as video
+  recording. File/shared-memory image transfers are not portable cast assets.
+  Other asciicast players need their own Kitty renderer to display these images.
+- Casts do not preserve fonts or window decorations. UTF-8 split across PTY reads
+  is joined; invalid UTF-8 is replaced with U+FFFD to satisfy the JSON format.
+  A single imported header/event line is limited to 64 MiB.
+
+Input keystrokes, environment variables, and command metadata are not collected.
+Anything printed by the program (including echoed commands) is still recorded.
+Cancellation and child failures attempt to finalize captured output. Failed cast
+writes and failed offline renders leave an existing destination intact.
 
 ## Tapes
 

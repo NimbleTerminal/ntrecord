@@ -33,7 +33,8 @@ var rules = map[string]rule{
 	"internal/doctor":    {internal: []string{"internal/encode", "internal/render", "internal/tape", "internal/terminfo"}, external: []string{"github.com/creack/pty"}, exec: true},
 	"internal/encode":    {internal: []string{"internal/gifencode"}, exec: true},
 	"internal/gifencode": {},
-	"internal/record":    {internal: []string{"internal/encode", "internal/render", "internal/tape", "internal/terminfo"}, external: []string{"github.com/creack/pty"}, exec: true},
+	"internal/asciicast": {}, // standard-library event codec, independent of rendering
+	"internal/record":    {internal: []string{"internal/asciicast", "internal/encode", "internal/render", "internal/tape", "internal/terminfo"}, external: []string{"github.com/creack/pty"}, exec: true},
 	// The only package that may import libghostty, so cgo stays behind one door.
 	"internal/render":    {internal: []string{"internal/tape", "internal/theme"}, external: []string{"go.mitchellh.com/libghostty", "golang.org/x/image"}},
 	"internal/tape":      {internal: []string{"internal/encode", "internal/theme"}},

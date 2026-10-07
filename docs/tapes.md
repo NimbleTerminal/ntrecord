@@ -34,7 +34,7 @@ Screenshot demo.png
 
 | Command | What it does |
 | --- | --- |
-| `Output path` | Write `.gif`, `.mp4`, `.webm`, `.txt`, `.ascii`, `.test`, or a PNG directory (a path ending in `/`). Repeat for several outputs. |
+| `Output path` | Write `.cast`, `.gif`, `.mp4`, `.webm`, `.txt`, `.ascii`, `.test`, or a PNG directory (a path ending in `/`). Repeat for several outputs. |
 | `Require program` | Fail before starting if the program is not on the recording's `PATH`. |
 | `Env KEY "value"` | Set an environment variable for the recorded program only. |
 | `Source common.tape` | Include another tape with shared settings and actions. |
@@ -124,3 +124,11 @@ The results:
 The cost is that a virtual clock does not wait for your program. A step that takes real time, such as a build, must end with `Wait+Screen /text/`, because a `Sleep` will not wait for it. If the screen is still changing when the tape ends, sigmamax says so on stderr.
 
 Programs that animate on their own, such as spinners and shaders, need `realtime`, and so does a live `record` session, which follows a person's clock. Typing is limited by the settle window and by encoding each distinct frame, so a tape that mostly types is not much faster than real time. A tape that sleeps or waits is.
+
+## Asciicast output
+
+`Output session.cast` records standard asciicast v3 terminal events. It can be
+combined with pixel outputs and follows the selected recording clock. Tapes with
+`Hide`, `ScrollUp`, or `ScrollDown` are rejected before execution when any output
+is a cast. See the [recording and rendering guide](../README.md#asciicast-recording-and-rendering)
+for playback, timing, and portability limits.

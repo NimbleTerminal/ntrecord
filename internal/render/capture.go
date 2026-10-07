@@ -43,3 +43,8 @@ func (r *Renderer) CaptureFrameAt(now time.Time) (*image.RGBA, error) {
 	r.presented, r.presentedImages = current, r.frameImages
 	return current, nil
 }
+
+// CaptureFrameAfter applies cursor and image-replacement timing on a cast clock.
+func (r *Renderer) CaptureFrameAfter(offset time.Duration) (*image.RGBA, error) {
+	return r.CaptureFrameAt(r.blinkStart.Add(offset))
+}

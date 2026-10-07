@@ -59,11 +59,11 @@ tasks:
       - rm -rf .deps
   fmt:
     desc: Format Go sources
-    cmds: [gofmt -w main.go integration_test.go internal examples]
+    cmds: [gofmt -w ./*.go internal examples]
   fmt-check:
     desc: Check Go formatting
     cmds:
-      - 'files=$(gofmt -l main.go integration_test.go internal examples); if [ -n "$files" ]; then printf "%s\n" "$files"; exit 1; fi'
+      - 'files=$(gofmt -l ./*.go internal examples); if [ -n "$files" ]; then printf "%s\n" "$files"; exit 1; fi'
   go-tidy:
     desc: Tidy module dependencies
     cmds: [go mod tidy]

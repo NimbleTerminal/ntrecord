@@ -148,3 +148,18 @@ Set the same repository secrets as gloss before publishing:
 
 - `HOMEBREW_TAP_GITHUB_TOKEN`: a token with contents write access to `NimbleMarkets/homebrew-tap`. GitHub supplies `GITHUB_TOKEN` for this repository's release.
 - For signed and notarized macOS binaries: `MACOS_SIGN_P12`, `MACOS_SIGN_PASSWORD`, `MACOS_NOTARY_KEY`, `MACOS_NOTARY_KEY_ID`, and `MACOS_NOTARY_ISSUER_ID`. Signing is on when `MACOS_SIGN_P12` is set, and local snapshots skip it.
+
+## Asciicast
+
+`internal/asciicast` is a standard-library-only streaming v2/v3 reader and v3
+writer. `internal/record` connects it to the PTY event stream and owns atomic
+publication. Casts are event outputs alongside the frame encoders, not pixel
+encoders. `RenderCast` reuses the renderer and encoders without starting a PTY.
+Replay uses recorded time for cursor blinking, synchronized updates, and the
+Kitty replacement grace period. The package boundary test enforces that the
+codec cannot depend on rendering or launch programs.
+
+Tests cover split UTF-8, v2/v3 clocks, large inline events, malformed input,
+deterministic recording, cancellation, finalization after child failure,
+unsupported tape edits, destination preservation, and PTY-to-cast-to-PNG Kitty
+pixels. CLI tests cover both flag orders accepted by `render`.

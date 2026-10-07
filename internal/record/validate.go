@@ -26,6 +26,7 @@ func Validate(t *tape.Tape) (Summary, error) {
 	c := t.Config
 	s := Summary{Commands: len(t.Actions), Outputs: c.Destinations()}
 	var errs []error
+	errs = append(errs, validateCast(c, t))
 	if r, err := render.New(c); err != nil {
 		errs = append(errs, err)
 	} else {

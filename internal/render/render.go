@@ -52,6 +52,7 @@ type Renderer struct {
 	images                                           map[uint32]cachedImage
 	replies                                          []byte
 	holdUntil                                        time.Time
+	writeTime                                        time.Time
 	Cols, Rows, Width, Height, CellWidth, CellHeight int
 }
 
@@ -126,7 +127,11 @@ func New(c tape.Config) (_ *Renderer, err error) {
 	r.term, err = vt.NewTerminal(vt.WithSize(uint16(r.Cols), uint16(r.Rows)),
 		vt.WithRenderHold(func(_ *vt.Terminal, held bool) {
 			if held {
-				r.holdUntil = time.Now().Add(time.Second)
+				now := r.writeTime
+				if now.IsZero() {
+					now = time.Now()
+				}
+				r.holdUntil = now.Add(time.Second)
 			} else {
 				r.holdUntil = time.Time{}
 			}
@@ -473,4 +478,15 @@ func (r *Renderer) paintImages(dst *image.RGBA, placements []placement, layer in
 			xdraw.NearestNeighbor.Scale(dst, dr, p.image, sr, draw.Over, nil)
 		}
 	}
+}
+
+// WriteAfter applies replay output using recorded time for synchronized updates.
+func (r *Renderer) WriteAfter(b []byte, offset time.Duration) error {
+	r.writeTime = r.blinkStart.Add(offset)
+	defer func() { r.writeTime = time.Time{} }()
+	return r.Write(b)
+}
+
+func (r *Renderer) RenderHeldAfter(offset time.Duration) bool {
+	return r.RenderHeld(r.blinkStart.Add(offset))
 }

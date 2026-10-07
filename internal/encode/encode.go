@@ -21,7 +21,7 @@ import (
 )
 
 // Extensions lists every output file extension Format accepts.
-var Extensions = []string{".gif", ".mp4", ".webm", ".txt", ".ascii", ".test"}
+var Extensions = []string{".gif", ".mp4", ".webm", ".txt", ".ascii", ".test", ".cast"}
 
 // OutputHelp describes the accepted outputs for command-line help.
 func OutputHelp() string {
@@ -159,6 +159,8 @@ func NewWithOptions(path string, width, height int, opts Options) (*Encoder, err
 	}
 	e := &Encoder{path: filepath.Clean(path), width: width, height: height, format: format, period: time.Duration(float64(time.Second) / opts.Framerate), loopOffset: opts.LoopOffset}
 	switch format {
+	case "cast":
+		return nil, fmt.Errorf(".cast requires terminal events, not pixel frames")
 	case "txt", "ascii", "test":
 		e.file, err = e.tempFile()
 		if err != nil {

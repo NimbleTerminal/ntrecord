@@ -18,6 +18,8 @@ import (
 type outputs struct {
 	encoders  []*encode.Encoder
 	needsText bool
+	casts     []*castOutput
+	castTime  time.Duration
 }
 
 func newOutputs(c tape.Config, r *render.Renderer) (*outputs, error) {
@@ -29,13 +31,22 @@ func newOutputs(c tape.Config, r *render.Renderer) (*outputs, error) {
 	w, h := r.OutputSize()
 	seed := r.PaletteSeed()
 	for _, path := range c.Destinations() {
+		format, _ := encode.Format(path)
+		if format == "cast" {
+			cast, err := newCastOutput(path, r)
+			if err != nil {
+				o.Abort()
+				return nil, err
+			}
+			o.casts = append(o.casts, cast)
+			continue
+		}
 		e, err := encode.NewWithOptions(path, w, h, encode.Options{Framerate: rate, LoopOffset: c.LoopOffset, Seed: seed})
 		if err != nil {
 			o.Abort()
 			return nil, err
 		}
 		o.encoders = append(o.encoders, e)
-		format, _ := encode.Format(path)
 		if format == "txt" || format == "ascii" || format == "test" {
 			o.needsText = true
 		}
@@ -63,14 +74,28 @@ func (o *outputs) Text(r *render.Renderer) error {
 	}
 	return errors.Join(errs...)
 }
+func (o *outputs) Output(at time.Duration, b []byte) error {
+	var errs []error
+	for _, c := range o.casts {
+		errs = append(errs, c.output(at, b))
+	}
+	o.castTime = at
+	return errors.Join(errs...)
+}
 func (o *outputs) Finish() error {
 	var errs []error
 	for _, e := range o.encoders {
 		errs = append(errs, e.Finish())
 	}
+	for _, c := range o.casts {
+		errs = append(errs, c.finish(o.castTime))
+	}
 	return errors.Join(errs...)
 }
 func (o *outputs) Abort() {
+	for _, c := range o.casts {
+		c.abort()
+	}
 	for _, e := range o.encoders {
 		e.Abort()
 	}
