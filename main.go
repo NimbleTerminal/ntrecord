@@ -9,6 +9,7 @@ import (
 	"os/signal"
 	"syscall"
 
+	"github.com/NimbleMarkets/sigmamax/internal/encode"
 	"github.com/NimbleMarkets/sigmamax/internal/record"
 	"github.com/NimbleMarkets/sigmamax/internal/tape"
 	"golang.org/x/term"
@@ -44,7 +45,7 @@ func run(args []string) error {
 	opts.Config.Version = version
 	if args[0] == "record" {
 		fs := flag.NewFlagSet("record", flag.ContinueOnError)
-		fs.StringVar(&opts.Config.Output, "o", opts.Config.Output, "output (.gif, .mp4, .webm, .txt, .ascii, or frames/; video requires ffmpeg)")
+		fs.StringVar(&opts.Config.Output, "o", opts.Config.Output, encode.OutputHelp())
 		fs.StringVar(&opts.Config.Shell, "shell", opts.Config.Shell, "interactive shell executable")
 		fs.IntVar(&opts.Config.Cols, "cols", opts.Config.Cols, "PTY columns")
 		fs.IntVar(&opts.Config.Rows, "rows", opts.Config.Rows, "PTY rows")

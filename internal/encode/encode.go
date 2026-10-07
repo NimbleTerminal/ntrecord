@@ -11,6 +11,7 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
+	"slices"
 	"strconv"
 	"strings"
 	"syscall"
@@ -19,17 +20,24 @@ import (
 	"github.com/NimbleMarkets/sigmamax/internal/gifencode"
 )
 
+// Extensions lists every output file extension Format accepts.
+var Extensions = []string{".gif", ".mp4", ".webm", ".txt", ".ascii", ".test"}
+
+// OutputHelp describes the accepted outputs for command-line help.
+func OutputHelp() string {
+	return "output (" + strings.Join(Extensions, ", ") + ", or frames/; video requires ffmpeg)"
+}
+
 // Format validates the output extension without requiring external tools.
 func Format(path string) (string, error) {
 	if strings.HasSuffix(path, "/") {
 		return "frames", nil
 	}
-	switch ext := strings.ToLower(filepath.Ext(path)); ext {
-	case ".gif", ".mp4", ".webm", ".txt", ".ascii", ".test":
+	ext := strings.ToLower(filepath.Ext(path))
+	if slices.Contains(Extensions, ext) {
 		return ext[1:], nil
-	default:
-		return "", fmt.Errorf("unsupported output %q: use .gif, .mp4, .webm, .txt, .ascii, or a frame directory ending in /", path)
 	}
+	return "", fmt.Errorf("unsupported output %q: use %s, or a frame directory ending in /", path, strings.Join(Extensions, ", "))
 }
 
 // Encoder owns its temporary output and subprocess. Call Abort on every path;
