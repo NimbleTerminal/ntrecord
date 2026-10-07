@@ -7,7 +7,7 @@ pkgconf_sha256=cd05c9589b9f86ecf044c10a2269822bc9eb001eced2582cfffd658b0a50c243
 deps="$root/.deps"
 
 fail() { printf '%s\n' "$*" >&2; exit 1; }
-need() { command -v "$1" >/dev/null 2>&1 || fail "Required tool '$1' is missing. See README.md (Build)."; }
+need() { command -v "$1" >/dev/null 2>&1 || fail "Required tool '$1' is missing. See docs/development.md (Build)."; }
 
 verify_sha256() {
     if command -v sha256sum >/dev/null 2>&1; then

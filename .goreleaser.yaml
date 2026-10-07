@@ -36,6 +36,7 @@ archives:
     name_template: '{{ .ProjectName }}_{{ .Version }}_{{ .Os }}_{{ .Arch }}'
     files:
       - README.md
+      - docs/*.md
       - LICENSE
       - FONT-LICENSE
       - src: internal/theme/LICENSE
