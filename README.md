@@ -97,7 +97,8 @@ Sleep 2s
 Screenshot demo.png
 ```
 
-See [docs/tapes.md](docs/tapes.md) for every command and setting, `Wait` semantics,
+Check a tape without recording it with `sigmamax validate demo.tape`, and check
+the machine with `sigmamax doctor`. See [docs/tapes.md](docs/tapes.md) for every command and setting, `Wait` semantics,
 quoting rules, and output behavior.
 
 ## Live recording

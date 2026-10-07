@@ -85,10 +85,7 @@ func Run(parent context.Context, opts Options) error {
 	} else {
 		terminfoDir = ""
 	}
-	env := environment(os.Environ(), opts.Config.ProgramVersion(), terminfoDir)
-	for key, value := range opts.Config.Env {
-		env = replaceEnv(env, key, value)
-	}
+	env := recordingEnv(opts.Config, terminfoDir)
 	for _, program := range opts.Config.Require {
 		if _, err := lookPath(program, env); err != nil {
 			return fmt.Errorf("Require %s: %w", program, err)

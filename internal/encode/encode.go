@@ -40,6 +40,80 @@ func Format(path string) (string, error) {
 	return "", fmt.Errorf("unsupported output %q: use %s, or a frame directory ending in /", path, strings.Join(Extensions, ", "))
 }
 
+// Preflight reports whether path can be written, without creating anything.
+// Video needs FFmpeg on PATH built with the format's encoder; it returns
+// FFmpeg's path then, and an empty string for outputs sigmamax writes itself.
+func Preflight(path string) (ffmpeg string, err error) {
+	format, err := Format(path)
+	if err != nil {
+		return "", err
+	}
+	if format != "mp4" && format != "webm" {
+		return "", nil
+	}
+	codec := "libx264"
+	if format == "webm" {
+		codec = "libvpx-vp9"
+	}
+	ffmpeg, err = exec.LookPath("ffmpeg")
+	if err != nil {
+		return "", fmt.Errorf(".%s output requires ffmpeg on PATH (macOS: brew install ffmpeg; Debian/Ubuntu: sudo apt-get install ffmpeg)", format)
+	}
+	encoders, err := ffmpegEncoders(ffmpeg)
+	if err != nil {
+		return "", err
+	}
+	if !encoders[codec] {
+		return "", fmt.Errorf(".%s output requires FFmpeg built with %s", format, codec)
+	}
+	return ffmpeg, nil
+}
+
+// FFmpegAvailability describes the FFmpeg on PATH, for diagnostics.
+type FFmpegAvailability struct {
+	Path     string
+	Version  string          // the first line of ffmpeg -version
+	Encoders map[string]bool // every encoder it lists
+}
+
+// FFmpegInfo inspects the FFmpeg on PATH. It fails if there is none.
+func FFmpegInfo() (FFmpegAvailability, error) {
+	path, err := exec.LookPath("ffmpeg")
+	if err != nil {
+		return FFmpegAvailability{}, fmt.Errorf("ffmpeg not found on PATH: %w", err)
+	}
+	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+	defer cancel()
+	out, err := exec.CommandContext(ctx, path, "-hide_banner", "-version").Output()
+	if err != nil {
+		return FFmpegAvailability{}, fmt.Errorf("run %s -version: %w", path, err)
+	}
+	version, _, _ := strings.Cut(strings.TrimSpace(string(out)), "\n")
+	encoders, err := ffmpegEncoders(path)
+	if err != nil {
+		return FFmpegAvailability{}, err
+	}
+	return FFmpegAvailability{Path: path, Version: version, Encoders: encoders}, nil
+}
+
+// ffmpegEncoders lists the encoders ffmpeg was built with.
+func ffmpegEncoders(ffmpeg string) (map[string]bool, error) {
+	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+	defer cancel()
+	listing, err := exec.CommandContext(ctx, ffmpeg, "-hide_banner", "-encoders").Output()
+	if err != nil {
+		return nil, fmt.Errorf("check FFmpeg encoders: %w", err)
+	}
+	encoders := map[string]bool{}
+	for _, line := range strings.Split(string(listing), "\n") {
+		// Lines read " V....D libx264  H.264 ..."; the flags are six characters.
+		if fields := strings.Fields(line); len(fields) >= 2 && len(fields[0]) == 6 {
+			encoders[fields[1]] = true
+		}
+	}
+	return encoders, nil
+}
+
 // Encoder owns its temporary output and subprocess. Call Abort on every path;
 // Finish atomically publishes the completed file and makes Abort a no-op.
 type Options struct {
@@ -114,30 +188,13 @@ func NewWithOptions(path string, width, height int, opts Options) (*Encoder, err
 		e.gif = &gifencode.Encoder{Seed: seed}
 		return e, nil
 	}
-	ffmpeg, err := exec.LookPath("ffmpeg")
+	ffmpeg, err := Preflight(path)
 	if err != nil {
-		return nil, fmt.Errorf(".%s output requires ffmpeg on PATH (macOS: brew install ffmpeg; Debian/Ubuntu: sudo apt-get install ffmpeg)", format)
+		return nil, err
 	}
 	codec := "libx264"
 	if format == "webm" {
 		codec = "libvpx-vp9"
-	}
-	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
-	defer cancel()
-	listing, err := exec.CommandContext(ctx, ffmpeg, "-hide_banner", "-encoders").Output()
-	if err != nil {
-		return nil, fmt.Errorf("check FFmpeg encoders: %w", err)
-	}
-	found := false
-	for _, line := range strings.Split(string(listing), "\n") {
-		fields := strings.Fields(line)
-		if len(fields) >= 2 && fields[1] == codec {
-			found = true
-			break
-		}
-	}
-	if !found {
-		return nil, fmt.Errorf(".%s output requires FFmpeg built with %s", format, codec)
 	}
 	f, err := e.tempFile()
 	if err != nil {

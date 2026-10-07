@@ -5,6 +5,15 @@ weight: 70
 
 # When something goes wrong
 
+Two commands answer most questions before you read further:
+
+```sh
+sigmamax doctor                 # can this machine record? engine, fonts, PTY, ffmpeg
+sigmamax validate demo.tape     # is this tape sound? nothing is recorded
+```
+
+`doctor` prints one line per check and says plainly what is missing (an absent FFmpeg is a warning, since only MP4 and WebM need it). `validate` reads the tape the way a recording would and reports every problem at once: syntax errors with their line and column, an unknown theme or font, a `Require` program that is not installed, an `Output` that needs FFmpeg.
+
 ## A tape stops with "Wait timed out"
 
 The error names the pattern sigmamax was waiting for and shows the last text on screen. Compare the two:

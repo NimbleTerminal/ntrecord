@@ -55,6 +55,22 @@ type Renderer struct {
 	Cols, Rows, Width, Height, CellWidth, CellHeight int
 }
 
+// Engine describes the libghostty-vt library this binary is linked against.
+type Engine struct {
+	Version       string
+	KittyGraphics bool
+	SIMD          bool
+}
+
+// EngineInfo reports the linked terminal engine's build.
+func EngineInfo() (Engine, error) {
+	info, err := vt.GetBuildInfo()
+	if err != nil {
+		return Engine{}, err
+	}
+	return Engine{Version: info.VersionString, KittyGraphics: info.KittyGraphics, SIMD: info.SIMD}, nil
+}
+
 func New(c tape.Config) (_ *Renderer, err error) {
 	if err = initPNG(); err != nil {
 		return nil, err

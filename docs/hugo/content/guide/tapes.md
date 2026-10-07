@@ -19,7 +19,7 @@ Enter                    # press a key
 Sleep 1s                 # let the viewer read it
 ```
 
-Run it with `sigmamax demo.tape`. Mistakes are reported with the file, line, and column.
+Run it with `sigmamax demo.tape`. Mistakes are reported with the file, line, and column. To check a tape without recording it, run `sigmamax validate demo.tape`: it also confirms the font, theme, `Require` programs, and outputs (video needs FFmpeg) are all usable.
 
 > [!WARNING]
 > **Only run tapes you trust.** A tape runs real commands with your privileges and can write files wherever its paths point.

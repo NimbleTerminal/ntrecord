@@ -5,10 +5,13 @@ import (
 	"errors"
 	"flag"
 	"fmt"
+	"io"
 	"os"
 	"os/signal"
+	"strings"
 	"syscall"
 
+	"github.com/NimbleMarkets/sigmamax/internal/doctor"
 	"github.com/NimbleMarkets/sigmamax/internal/encode"
 	"github.com/NimbleMarkets/sigmamax/internal/record"
 	"github.com/NimbleMarkets/sigmamax/internal/tape"
@@ -24,19 +27,37 @@ func main() {
 	sigpipe := make(chan os.Signal, 1)
 	signal.Notify(sigpipe, syscall.SIGPIPE)
 	defer signal.Stop(sigpipe)
-	if err := run(os.Args[1:]); err != nil {
+	if err := run(os.Args[1:], os.Stdout, os.Stderr); err != nil {
 		fmt.Fprintln(os.Stderr, "sigmamax:", err)
 		os.Exit(1)
 	}
 }
 
-func run(args []string) error {
+const usage = `Usage: sigmamax <file.tape>
+       sigmamax record [-o output] [-shell executable] [-cols n] [-rows n] [-font-size pixels] [-- command args...]
+       sigmamax validate <file.tape>...
+       sigmamax doctor
+       sigmamax --version
+
+validate checks tapes (syntax, fonts, themes, Require, outputs) without recording.
+doctor checks that this machine can record.`
+
+func run(args []string, stdout, stderr io.Writer) error {
 	if len(args) == 1 && (args[0] == "--version" || args[0] == "-version" || args[0] == "version") {
-		fmt.Println("sigmamax", version)
+		fmt.Fprintln(stdout, "sigmamax", version)
 		return nil
 	}
 	if len(args) == 0 || args[0] == "-h" || args[0] == "--help" {
-		fmt.Println("Usage: sigmamax --version\n       sigmamax <file.tape>\n       sigmamax record [-o output] [-shell executable] [-cols n] [-rows n] [-font-size pixels] [-- command args...]")
+		fmt.Fprintln(stdout, usage)
+		return nil
+	}
+	switch args[0] {
+	case "validate":
+		return validate(args[1:], stdout, stderr)
+	case "doctor":
+		if !doctor.Run(stdout, doctor.Options{Version: version}) {
+			return errors.New("doctor found problems")
+		}
 		return nil
 	}
 	ctx, stop := signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGTERM)
@@ -56,7 +77,7 @@ func run(args []string) error {
 			}
 			return err
 		}
-		opts.Command, opts.Input, opts.Output = fs.Args(), os.Stdin, os.Stdout
+		opts.Command, opts.Input, opts.Output = fs.Args(), os.Stdin, stdout
 		if term.IsTerminal(int(os.Stdin.Fd())) {
 			state, err := term.MakeRaw(int(os.Stdin.Fd()))
 			if err != nil {
@@ -80,7 +101,37 @@ func run(args []string) error {
 		return err
 	}
 	for _, path := range opts.Config.Destinations() {
-		fmt.Fprintln(os.Stderr, "Wrote", path)
+		fmt.Fprintln(stderr, "Wrote", path)
+	}
+	return nil
+}
+
+// validate checks each tape without recording and reports every problem, so one
+// run shows all that needs fixing.
+func validate(paths []string, stdout, stderr io.Writer) error {
+	if len(paths) == 0 {
+		return errors.New("validate: expected one or more tape paths")
+	}
+	failed := 0
+	for _, path := range paths {
+		t, err := tape.ParseFile(path)
+		if err != nil { // already names the file, line and column
+			fmt.Fprintln(stderr, err)
+			failed++
+			continue
+		}
+		t.Config.Version = version
+		s, err := record.Validate(t)
+		if err != nil {
+			fmt.Fprintf(stderr, "%s: %v\n", path, err)
+			failed++
+			continue
+		}
+		fmt.Fprintf(stdout, "%s: ok — %d commands · %dx%d cells, %dx%d px · outputs: %s\n",
+			path, s.Commands, s.Cols, s.Rows, s.Width, s.Height, strings.Join(s.Outputs, ", "))
+	}
+	if failed > 0 {
+		return fmt.Errorf("%d of %d tapes invalid", failed, len(paths))
 	}
 	return nil
 }
