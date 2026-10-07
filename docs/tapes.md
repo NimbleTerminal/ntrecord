@@ -1,19 +1,14 @@
 # Tape language
 
-sigmamax supports the VHS tape language on its native renderer. The goal is
-useful script compatibility; font metrics, antialiasing, decorations, and encoded
-pixels follow sigmamax rather than matching VHS screenshots.
+sigmamax runs the VHS tape language on its own renderer. Scripts carry over, but fonts, anti-aliasing, window decoration, and encoded pixels are sigmamax's own and do not match VHS screenshots.
 
-**Only run tapes you trust.** A tape runs real programs: `Set Shell`, `Type`, and
-`Env` execute commands with your privileges, and `Output`, `Source`, and
-`Screenshot` read and write files wherever the path points, as in VHS.
+**Only run tapes you trust.** A tape runs real programs: `Set Shell`, `Type`, and `Env` execute commands with your privileges, and `Output`, `Source`, and `Screenshot` read and write files wherever the path points, as in VHS.
 
-Run tapes from the project directory. Shell commands, output paths, font paths,
-and `Source` paths resolve from the invocation directory, including nested
-sources. Source cycles and excessive nesting are errors. Outputs declared inside
-sourced tapes are ignored, following VHS, so a shared tape cannot redirect the
-caller's recording. Repeated top-level `Output` commands write every destination
-from the same session. Files are replaced individually after successful encoding.
+## Paths and sources
+
+Run a tape from the directory it expects. Shell commands, output paths, font paths, and `Source` paths are all resolved from the directory you ran sigmamax in, including inside sourced tapes. A `Source` cycle, or nesting deeper than 32 files, is an error.
+
+Following VHS, `Output` lines inside a sourced tape are ignored, so a shared tape cannot redirect the caller's recording. Repeat `Output` in the top-level tape to write several files from one session. Each file is replaced only after it encodes successfully.
 
 ```text
 Output demo.gif
@@ -35,106 +30,97 @@ Sleep 2s
 Screenshot demo.png
 ```
 
-| Command | Behavior |
+## Commands
+
+| Command | What it does |
 | --- | --- |
-| `Output path` | `.gif`, `.mp4`, `.webm`, `.txt`, `.ascii`, `.test`, or a PNG directory ending in `/`; repeat for multiple outputs |
-| `Require program` | Check the recording's `PATH` before starting the PTY |
-| `Env KEY "value"` | Set a child environment variable without changing the recorder's environment |
-| `Source common.tape` | Include another tape with shared settings and actions |
-| `Type "text"`, `Type@50ms "text"` | Type text using the current typing interval or a per-command override |
-| `Enter`, `Tab`, `Space`, `Backspace`, `Delete`, `Insert`, `Escape`, `Home`, `End`, `Up`, `Down`, `Left`, `Right`, `PageUp`, `PageDown`, `F1`–`F25` | Send keys through libghostty's mode-aware encoder |
-| `Ctrl+C`, `Alt+x`, `Shift+Tab`, `Ctrl+Alt+Shift+R` | Combine modifiers; control chains such as `Ctrl+B+D` also work |
-| `Down@100ms 3` | Repeat a key with an optional interval and count |
-| `ScrollUp 5`, `ScrollDown@100ms 5` | Scroll the terminal viewport without sending keys to the application |
-| `Sleep 0.5`, `Sleep 500ms`, `Sleep 500 ms` | Wait while capture continues; bare numbers are seconds |
-| `Wait`, `Wait+Line /regex/`, `Wait+Screen@5s /regex/` | Wait for displayed text, with optional scope and timeout override |
-| `Copy "text"`, `Paste` | Use a recording-local clipboard; paste respects bracketed-paste mode |
-| `Hide`, `Show` | Pause/resume capture while the PTY continues running; hidden time is omitted |
-| `Screenshot path.png` | Save the current composited frame, including Kitty images and decorations |
+| `Output path` | Write `.gif`, `.mp4`, `.webm`, `.txt`, `.ascii`, `.test`, or a PNG directory (a path ending in `/`). Repeat for several outputs. |
+| `Require program` | Fail before starting if the program is not on the recording's `PATH`. |
+| `Env KEY "value"` | Set an environment variable for the recorded program only. |
+| `Source common.tape` | Include another tape with shared settings and actions. |
+| `Type "text"`, `Type@50ms "text"` | Type text at the current typing speed, or at a speed for this command. |
+| `Enter`, `Tab`, `Space`, `Backspace`, `Delete`, `Insert`, `Escape`, `Home`, `End`, `Up`, `Down`, `Left`, `Right`, `PageUp`, `PageDown`, `F1`–`F25` | Press a key. libghostty encodes it for the mode the program has set. |
+| `Ctrl+C`, `Alt+x`, `Shift+Tab`, `Ctrl+Alt+Shift+R` | Press a key with modifiers. Chains such as `Ctrl+B+D` work too. |
+| `Down@100ms 3` | Repeat a key, with an optional interval and a count. |
+| `ScrollUp 5`, `ScrollDown@100ms 5` | Scroll the viewport. The program is not told. |
+| `Sleep 0.5`, `Sleep 500ms`, `Sleep 500 ms` | Wait while recording continues. A bare number is seconds. |
+| `Wait`, `Wait+Line /regex/`, `Wait+Screen@5s /regex/` | Wait for text on screen, with an optional scope and timeout. |
+| `Copy "text"`, `Paste` | Use a clipboard private to the recording. Paste honors bracketed-paste mode. |
+| `Hide`, `Show` | Stop and resume recording while the program keeps running. Hidden time is cut. |
+| `Screenshot path.png` | Save the current frame, with Kitty images and decoration, as a PNG. |
 
-Single quotes, double quotes, and backticks preserve their contents literally,
-including shell backslashes. Choose another delimiter to include a quote. This
-matches VHS and replaces sigmamax's original Go-style double-quote escaping.
-Regex literals accept escaped slashes, and themes accept multiline JSON objects.
-`#` starts a comment outside literals. Multiple commands may share a line.
-Errors include the source file, line, and column.
+`Output`, `Env`, `Require`, and settings must come before the first action. The one exception is `TypingSpeed`, which can change anywhere. A misplaced setting or an unknown command is an error, not silently ignored. Errors name the file, line, and column.
 
-`Wait+Line` reads the cursor row; `Wait+Screen` reads the visible viewport. Both
-use Go regular expressions against terminal cells, so erased text or escape
-sequences do not produce false matches. Default scope is `Line`, timeout is
-15 seconds, and pattern is `[$>#]$`, covering common shell prompts. Use a specific
-pattern for reliable application readiness; output echoed while typing can also
-match a broad regex. Timeout errors report the pattern and last observed text.
+## Syntax
 
-Tape controls are ordered after already-queued PTY output. `Hide` captures the
-last visible viewport, including during synchronized output; `Show` resumes from
-the current viewport. Neither waits for a running command to finish: use `Wait`
-before a visibility change when command completion matters. At the end of a
-successful tape, output drains until 100ms of silence, up to one second. Use
-`Wait` or `Sleep` for commands that need longer.
+- Single quotes, double quotes, and backticks keep their contents literally, shell backslashes included. To put a quote inside, use a different delimiter. This matches VHS and replaces sigmamax's original Go-style escaping of double quotes.
+- Regex literals may contain escaped slashes. Themes may be multiline JSON objects.
+- `#` starts a comment outside a literal. Several commands may share a line.
 
-| Setting | Values / default |
+## Waiting
+
+`Wait+Line` checks the line the cursor is on. `Wait+Screen` checks everything visible. Both match a Go regular expression against the terminal's cells, so erased text and escape sequences never match by accident. With no arguments, `Wait` uses the `Line` scope, a 15 second timeout, and the pattern `[$>#]$`, which matches common shell prompts.
+
+Use a specific pattern whenever you can. Text you type is echoed on screen, so a broad pattern can match your own input. A timeout error reports the pattern and the last text it saw.
+
+Controls are ordered after any output already queued from the program, so a control cannot overtake output that arrived before it.
+
+## Hide and Show
+
+`Hide` records the last visible screen, even in the middle of synchronized output, then stops recording. `Show` resumes from the current screen. Neither waits for a running command, so put a `Wait` before them when the command must finish first.
+
+At the end of a successful tape, sigmamax waits for the output to go quiet (100 ms of silence, one second at most). Use `Wait` or `Sleep` for commands that need longer. Finishing the tape closes the PTY and stops the shell.
+
+## Settings
+
+| Setting | Values and default |
 | --- | --- |
-| `Shell` | Executable name or path, started with `-i`; default `/bin/sh` |
-| `FontSize`, `FontFamily` | 6–96 pixels, default 18; bundled `Go Mono`, installed family name, or `.ttf`/`.otf` path |
-| `Columns` / `Cols`, `Rows` | Grid dimensions, default 80×24 |
-| `Width`, `Height` | Total output pixels including decorations; cannot combine with `Columns` or `Rows` on the same axis |
-| `LetterSpacing`, `LineHeight` | Additional horizontal pixels and line-height multiplier; defaults 0 and 1 |
-| `TypingSpeed` | Duration between keystrokes, default 25ms; can change during playback |
-| `WaitTimeout`, `WaitPattern` | Default timeout and `/regex/` for `Wait` |
-| `Framerate`, `PlaybackSpeed` | 1–120 FPS (default 20); playback multiplier (default 1) |
-| `LoopOffset` | GIF starting frame index (fractional values accepted), or timeline percentage such as `50%` |
-| `Theme` | One of 348 bundled VHS theme names, or inline JSON with foreground/background, cursor, and ANSI palette colors |
-| `Padding`, `Margin`, `MarginFill` | Pixels around the grid/window and an optional `#RRGGBB` margin color |
-| `WindowBar`, `WindowBarSize` | `Colorful`, `ColorfulRight`, `Rings`, `RingsRight`, or `None`; bar height defaults to 30 pixels |
-| `BorderRadius`, `CursorBlink` | Corner radius in pixels; cursor blinking boolean (default false) |
+| `Shell` | Executable name or path, started with `-i`. Default `/bin/sh`. |
+| `FontSize`, `FontFamily` | 6 to 96 pixels (default 18). `Go Mono` is built in; use an installed family name or a `.ttf`/`.otf` path for another. |
+| `Columns` (or `Cols`), `Rows` | Grid size. Default 80×24. |
+| `Width`, `Height` | Total output size in pixels, decoration included. Cannot be combined with `Columns` or `Rows` on the same axis. |
+| `LetterSpacing`, `LineHeight` | Extra pixels between letters (default 0), and a line-height multiplier (default 1). |
+| `TypingSpeed` | Time between keystrokes. Default 25 ms. Can change during the tape. |
+| `WaitTimeout`, `WaitPattern` | Default timeout and `/regex/` for `Wait`. |
+| `Framerate`, `PlaybackSpeed` | 1 to 120 FPS (default 20), and a playback speed multiplier (default 1). |
+| `LoopOffset` | Where a GIF starts: a frame index (fractions allowed) or a percentage such as `50%`. |
+| `Theme` | One of 348 bundled VHS theme names, or inline JSON with foreground, background, cursor, and ANSI colors. |
+| `Padding`, `Margin`, `MarginFill` | Pixels around the grid and around the window, and an optional `#RRGGBB` margin color. |
+| `WindowBar`, `WindowBarSize` | `Colorful`, `ColorfulRight`, `Rings`, `RingsRight`, or `None`. Bar height defaults to 30 pixels. |
+| `BorderRadius`, `CursorBlink` | Corner radius in pixels, and whether the cursor blinks (default false). |
 
-Put `Output`, `Env`, `Require`, and settings before actions, except that
-`TypingSpeed` may change anywhere. Misplaced settings and unknown commands are
-errors rather than silently ignored. `Copy`/`Paste` intentionally use an isolated
-clipboard, and do not read or overwrite your desktop clipboard. Font families
-are looked up in standard macOS/Linux font directories; missing fonts produce
-an actionable error. Missing bold/italic variants use the available regular face.
-Theme selection colors are accepted but do not affect recording without a selection.
+A few details:
 
-Capture uses the configured framerate. GIF merges identical adjacent bitmaps;
-video repeats held frames on its fixed-rate timeline and lets the codec compress
-duplicates. Playback speed changes recorded time without speeding up shell input
-or readiness waits. Loop offsets apply to GIF only. PNG sequences are numbered
-`000001.png`, `000002.png`, etc.; their destination must be absent or empty so
-existing frame collections are never deleted. Text outputs contain changed
-viewport checkpoints after visible tape actions and the final viewport, separated
-by a rule. Use `Wait` before checkpoints that depend on asynchronous output.
-They provide readable golden files, with sigmamax's own checkpoint formatting.
+- `Copy` and `Paste` use their own clipboard. They never read or change your desktop clipboard.
+- Fonts are looked up in the standard macOS and Linux font directories. A missing font gives an error that says what to do. If a bold or italic variant is missing, the regular face is used.
+- A theme's selection colors are accepted but have no effect, since nothing is ever selected.
 
-Try `task demo:language` for a sourced, themed tape with clipboard input, keyboard
-editing, waits, multiple outputs, and a PNG screenshot. `task demo:kitty` exercises
-direct PNG APCs, waiting for `go run` to finish with `Wait+Screen`. Tape completion
-closes the PTY and stops its shell.
+## Capture and outputs
+
+Capture runs at the configured framerate. GIF merges identical neighboring frames. Video repeats held frames on a fixed timeline and lets the codec compress the duplicates. `PlaybackSpeed` changes recorded time, not how fast the shell receives input or how long a `Wait` takes. `LoopOffset` applies to GIF only.
+
+PNG frames are numbered `000001.png`, `000002.png`, and so on. The destination must be absent or empty, so existing frames are never deleted.
+
+Text outputs hold the screen's text after each visible action, but only when it changed, plus the final screen, separated by a rule. Put a `Wait` before any checkpoint that depends on late output. They make readable golden files, in sigmamax's own format.
+
+To try the features, run `task demo:language` for a sourced, themed tape with clipboard use, keyboard editing, waits, several outputs, and a screenshot. `task demo:kitty` draws a PNG through direct Kitty transfer and waits for `go run` with `Wait+Screen`.
 
 ## Deterministic mode
 
-By default a recording samples the screen on the wall clock (`realtime`), so it
-captures whatever a program does, animations included, but two runs of one tape
-differ, and slow encoding can stretch the recording past the script. Pass `-mode
-deterministic` to run a virtual clock instead:
+By default a recording samples the screen on the wall clock (`realtime`). That captures whatever a program does, animations included, but two runs of one tape differ, and slow encoding can stretch the recording past the script. For a virtual clock, pass `-mode deterministic`:
 
 ```sh
 sigmamax -mode deterministic demo.tape
 ```
 
-After every step the program is given time to settle (30 ms of silence, 1 s at
-most; the first step also waits for any output, so a slow shell is not recorded
-before its prompt). Then the screen is held for exactly the time the tape names:
-the typing interval after each key, the duration of a `Sleep`, divided by
-`PlaybackSpeed`. `Sleep 5s` costs no real time, hidden time is omitted as usual, a
-blinking cursor still blinks, and the same tape gives byte-identical output, so a
-recording can be a golden file.
+After every step, sigmamax lets the program settle: 30 ms of silence, or one second at most. The first step also waits for any output, so a slow shell is not recorded before its prompt appears. Then the screen is held for exactly the time the tape names: the typing interval after each key, or the duration of a `Sleep`, divided by `PlaybackSpeed`.
 
-The trade is that a virtual clock does not wait for the program. A step that takes
-real time, such as a build, must end with `Wait+Screen /text/`; a `Sleep` will not
-wait for it. If the screen is still changing when the tape ends, sigmamax says so
-on stderr. Programs that animate on their own (spinners, shaders) need `realtime`,
-and so does a live `record` session, which follows a person's clock. Typing is
-bound by the settle window and by encoding each distinct frame, so a tape that
-mostly types is not much faster than real time; one that sleeps or waits is.
+The results:
+
+- The same tape gives byte-identical output, so a recording can be a golden file.
+- `Sleep 5s` costs no real time.
+- Hidden time is left out, as usual, and a blinking cursor still blinks.
+
+The cost is that a virtual clock does not wait for your program. A step that takes real time, such as a build, must end with `Wait+Screen /text/`, because a `Sleep` will not wait for it. If the screen is still changing when the tape ends, sigmamax says so on stderr.
+
+Programs that animate on their own, such as spinners and shaders, need `realtime`, and so does a live `record` session, which follows a person's clock. Typing is limited by the settle window and by encoding each distinct frame, so a tape that mostly types is not much faster than real time. A tape that sleeps or waits is.

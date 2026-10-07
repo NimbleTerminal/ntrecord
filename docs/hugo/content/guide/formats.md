@@ -21,7 +21,7 @@ An unsupported extension is rejected before the session starts, so you do not lo
 
 GIFs play anywhere and need no tools, but they use at most 256 colors (a theme's own colors are kept exact; anti-aliased text edges and photos are dithered) and get large for long or big recordings. sigmamax holds a GIF's distinct frames in memory, up to 512 MiB, so keep GIFs short.
 
-Video keeps full color and is far smaller, but it needs FFmpeg. It is silent, and small colored text can look a touch softer because video stores color at lower resolution than brightness. Video is streamed to FFmpeg as you record, so long videos do not use memory.
+Video has no 256-color limit and is far smaller, but it needs FFmpeg. It is silent, and small colored text can look slightly softer because video stores color at a lower resolution than brightness. Frames are streamed to FFmpeg as you record, so long videos do not use memory.
 
 ## Several outputs at once
 

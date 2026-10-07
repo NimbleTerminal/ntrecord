@@ -75,5 +75,3 @@ Set LoopOffset 50%       # a GIF starts halfway through its loop
 ```
 
 `PlaybackSpeed` speeds up recorded time but not the waiting inside the session, so `Wait` still takes as long as the command does. `LoopOffset` applies to GIFs only.
-
-Try `Set Theme`, `Padding`, `Margin`, and `WindowBar` together; that combination makes a recording look ready to post.

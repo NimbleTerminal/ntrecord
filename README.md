@@ -1,81 +1,59 @@
 # sigmamax
 
-Record a terminal session to GIF, MP4, or WebM, including Kitty graphics. sigmamax is a new
-Go module (`github.com/NimbleMarkets/sigmamax`), licensed under MIT. It runs a
-real PTY, feeds its bytes into libghostty-vt, and composites pixels in Go.
-There is no browser backend, ttyd, xterm.js, headless Chrome, or ghostty-web.
-It is not a fork of VHS.
+Record a terminal session to GIF, MP4, or WebM, including Kitty graphics.
+
+sigmamax runs your program on a real PTY, passes its output to libghostty-vt (the terminal engine from Ghostty), and draws every frame itself in Go. No browser, screen capture, or window is involved. It reads [VHS](https://github.com/charmbracelet/vhs) tape scripts, but it is not a fork of VHS.
 
 ## Install
 
-Release packaging uses the same Homebrew tap as gloss. Once the first tagged
-release is published, install on macOS (13+) or Linux, Intel or ARM, with:
+Once the first tagged release is published, install it from the same Homebrew tap as gloss, on macOS (13 or later) or Linux, Intel or ARM:
 
 ```sh
 brew install --cask nimblemarkets/tap/sigmamax
 sigmamax --version
 ```
 
-The release binaries include libghostty-vt and the default font. GIF recording
-needs no additional tools. For MP4/WebM, also install `ffmpeg`:
+The release is a single binary with libghostty-vt and a default font built in, so recording a GIF needs nothing else. MP4 and WebM also need `ffmpeg`:
 
 ```sh
 brew install ffmpeg
 ```
 
-Release archives and SHA-256 checksums are published to
-[GitHub Releases](https://github.com/NimbleMarkets/sigmamax/releases). Linux
-binaries use static musl; macOS binaries use the system libraries. Neither
-requires Zig, pkg-config, or a separate Ghostty installation at runtime.
+Archives and SHA-256 checksums are on [GitHub Releases](https://github.com/NimbleMarkets/sigmamax/releases). Linux binaries are static (musl) and macOS binaries use the system libraries, so none of them needs Zig, pkg-config, or Ghostty at runtime. To build from source, see [docs/development.md](docs/development.md).
+
+## Quick start
+
+```sh
+sigmamax record -o session.gif           # record a shell; exit it (Ctrl-D) to save
+sigmamax record -o demo.gif -- ls -la    # record one command
+sigmamax demo.tape                       # run a script
+sigmamax validate demo.tape              # check a script without recording it
+sigmamax doctor                          # check that this machine can record
+```
 
 ## Output formats
 
-The filename extension selects the encoder in both tape `Output` and live
-`record -o`. Unsupported extensions are rejected before launching the PTY. Text checkpoints
-(`.txt`, `.ascii`, `.test`) and PNG frame directories (a path ending in `/`) are
-also accepted; see [docs/tapes.md](docs/tapes.md).
+The file extension picks the format, for both a tape's `Output` and `record -o`. An unsupported extension is rejected before the PTY starts.
 
-| Extension | Encoder | Runtime requirement |
+| Extension | Result | Needs |
 | --- | --- | --- |
-| `.gif` | Go GIF encoder, 256-color palette with exact theme colors, dithered | None beyond sigmamax |
-| `.mp4` | H.264 (`libx264`), CRF 18, fast-start MP4 | FFmpeg on `PATH` |
-| `.webm` | VP9 (`libvpx-vp9`), CRF 30 | FFmpeg on `PATH` |
+| `.gif` | Animated GIF (256 colors, with the theme's own colors kept exact) | nothing |
+| `.mp4` | H.264 video (`libx264`, CRF 18, fast-start) | FFmpeg |
+| `.webm` | VP9 video (`libvpx-vp9`, CRF 30) | FFmpeg |
+| `.txt`, `.ascii`, `.test` | The screen's text at each step | nothing |
+| a path ending in `/` | One numbered PNG per frame | nothing |
 
-Install FFmpeg with `brew install ffmpeg` on macOS or
-`sudo apt-get install ffmpeg` on Debian/Ubuntu. The binary must include the
-selected encoder; sigmamax checks this before starting the session. FFmpeg is
-optional and is not linked into sigmamax or required to build it or record GIFs.
+FFmpeg must be on `PATH` and built with the encoder for the format. sigmamax checks this before it starts recording. On Debian or Ubuntu, `sudo apt-get install ffmpeg`.
 
-```sh
-task record -- -o session.mp4 -cols 100 -rows 30
-task record -- -o session.webm -- sh -c 'printf "hello\n"; sleep 2'
-task run -- examples/kitty-mp4.tape
-task demo:video  # Kitty MP4 and WebM examples
-```
+Video is made from the same frames as GIF, piped straight into FFmpeg's [raw-video input](https://ffmpeg.org/ffmpeg-formats.html#rawvideo) with no intermediate files. It is silent and uses `yuv420p` for wide playback support, so small colored text can look slightly softer. Odd sizes are padded by one pixel on the right and bottom. Hidden time is left out, and the duration is rounded to the frame interval (`Framerate`; 50 ms at the default 20 FPS).
 
-Video uses the same Go compositor as GIF. Completed RGBA frames are piped
-directly into FFmpeg's [raw-video input](https://ffmpeg.org/ffmpeg-formats.html#rawvideo),
-with no intermediate images or GIF conversion. Output is silent, lossy video
-using `yuv420p` for playback compatibility; it avoids GIF palette quantization,
-though chroma subsampling can soften small colored text. Odd viewport dimensions
-are padded by one pixel on the right/bottom as needed, without resizing text.
-Hidden time is omitted. Video duration is rounded to its configured frame interval (`Framerate`; 50 ms at the default 20 FPS).
-
-Output is written to a temporary file alongside the destination and renamed
-only after successful encoding. Cancellation finalizes captured frames before
-returning the cancellation error. Encoder failures leave any previous output
-intact and include FFmpeg's diagnostics. Slow encoding can reduce the rate at
-which the PTY is sampled; elapsed visible time is retained in the video.
+Output goes to a temporary file next to the destination and is renamed only after encoding succeeds, so a failed recording never replaces an existing file. Encoder errors include FFmpeg's own message. If the encoder is slow, the PTY is sampled less often, but the elapsed visible time is kept.
 
 ## Tapes
 
-sigmamax supports the VHS tape language on its native renderer. The goal is
-useful script compatibility; font metrics, antialiasing, decorations, and encoded
-pixels follow sigmamax rather than matching VHS screenshots.
+A tape is a script of settings, keystrokes, and waits. sigmamax runs VHS tapes on its own renderer, so scripts carry over, but fonts, anti-aliasing, and window decoration are sigmamax's own and do not match VHS pixel for pixel.
 
-**Only run tapes you trust.** A tape runs real programs: `Set Shell`, `Type`, and
-`Env` execute commands with your privileges, and `Output`, `Source`, and
-`Screenshot` read and write files wherever the path points, as in VHS.
+**Only run tapes you trust.** A tape runs real programs: `Set Shell`, `Type`, and `Env` execute commands with your privileges, and `Output`, `Source`, and `Screenshot` read and write files wherever the path points, as in VHS.
 
 ```text
 Output demo.gif
@@ -97,55 +75,36 @@ Sleep 2s
 Screenshot demo.png
 ```
 
-Check a tape without recording it with `sigmamax validate demo.tape`, and check
-the machine with `sigmamax doctor`. `sigmamax -mode deterministic demo.tape` runs a
-virtual clock: the same tape gives byte-identical output and `Sleep` costs no real
-time ([details](docs/tapes.md#deterministic-mode)). See [docs/tapes.md](docs/tapes.md) for every command and setting, `Wait` semantics,
-quoting rules, and output behavior.
+`sigmamax validate demo.tape` checks a tape without recording it, and `sigmamax doctor` checks the machine. `sigmamax -mode deterministic demo.tape` runs a virtual clock: the same tape gives byte-identical output, and `Sleep` costs no real time ([details](docs/tapes.md#deterministic-mode)). Every command and setting is in [docs/tapes.md](docs/tapes.md).
 
 ## Live recording
 
 ```sh
-task record -- -o session.gif -cols 100 -rows 30
-task record -- -o command.gif -- sh -c 'printf "hello\n"; sleep 2'
+sigmamax record -o session.gif -cols 100 -rows 30
+sigmamax record -o command.gif -- sh -c 'printf "hello\n"; sleep 2'
 ```
 
-`record` attaches your input/output to a newly spawned PTY running the shell or
-command. Exit the shell (or press Ctrl-D) to finish and write the recording. Ctrl-C
-is passed to the foreground program when stdin is a terminal. SIGTERM cancels
-recording and saves captured frames. The original terminal mode is restored on
-exit. It does not attach to an unrelated, already-running process.
+`record` starts a new PTY running your shell, or the command you give, and connects your terminal to it. Exit the shell (or press Ctrl-D) to finish and write the recording. Ctrl-C goes to the program you are running when stdin is a terminal. SIGTERM stops the recording and saves the frames captured so far. Your terminal mode is restored on exit. It cannot attach to a process that is already running.
 
-The recorded viewport remains fixed at the requested size. Child exit failures
-and output-forwarding errors (including a closed stdout pipe) are returned after
-attempting to save every recording output. FFmpeg writes have a 30-second deadline
-and are interrupted by cancellation. A failed or interrupted video stream cannot
-always be saved; other output formats are finalized independently, and an existing
-destination is replaced only after successful encoding. GIF holds unique paletted frames in
-memory with a 512 MiB limit; keep GIF recordings reasonably short. Video streams
-frames to FFmpeg as they are captured, without accumulating them in Go memory. Viewports are
-limited to 8192 pixels per side and 16 megapixels.
+The recorded window keeps the size you asked for. Limits and failure behavior:
+
+- GIF keeps each distinct frame in memory, up to 512 MiB, so keep GIF recordings fairly short. Video is streamed to FFmpeg and does not accumulate.
+- The window is limited to 8192 pixels per side and 16 megapixels.
+- If the program fails, or output cannot be forwarded (a closed stdout pipe, for example), sigmamax tries to save every output first and then returns the error.
+- FFmpeg writes have a 30-second deadline and are interrupted on cancellation. A video stream that fails or is cut off cannot always be saved. Other formats finish independently, and an existing file is replaced only after a successful encode.
 
 ## Documentation
 
-- The [user guide](https://nimblemarkets.github.io/sigmamax/): installing, a first recording, writing tapes, appearance, output formats, recording images, and troubleshooting.
-- [docs/tapes.md](docs/tapes.md): reference for the tape language, commands, settings, and capture timing.
-- [docs/rendering.md](docs/rendering.md): fonts, the renderer, and the supported Kitty graphics slice.
+- The [user guide](https://nimblemarkets.github.io/sigmamax/): installing, a first recording, tapes, appearance, output formats, recording images, and troubleshooting.
+- [docs/tapes.md](docs/tapes.md): the tape language, commands, settings, and capture timing.
+- [docs/rendering.md](docs/rendering.md): fonts, the renderer, and the supported Kitty graphics.
 - [docs/development.md](docs/development.md): building from source, tests and CI, and releases.
 
 ## Acknowledgements
 
-Thank you to [Charm](https://charm.sh) for [VHS](https://github.com/charmbracelet/vhs),
-which inspired sigmamax's tape format and terminal recording workflow, and to
-[Ghostty](https://ghostty.org) for libghostty-vt, which powers sigmamax's terminal
-emulation and Kitty graphics support. The bundled theme catalog and compatibility
-fixtures come from VHS commit `24fa2254a9806091e6ee6a980e9f3bcfe0a9ba53`; see
-[theme license](internal/theme/LICENSE) and [fixture license](internal/tape/testdata/vhs/LICENSE).
+Thank you to [Charm](https://charm.sh) for [VHS](https://github.com/charmbracelet/vhs), which inspired sigmamax's tape format and workflow, and to [Ghostty](https://ghostty.org) for libghostty-vt, which provides the terminal emulation and Kitty graphics support. The bundled theme catalog and compatibility fixtures come from VHS commit `24fa2254a9806091e6ee6a980e9f3bcfe0a9ba53`; see the [theme license](internal/theme/LICENSE) and [fixture license](internal/tape/testdata/vhs/LICENSE).
 
-[foley](https://github.com/GH-Jaider/foley) takes the same approach and came first.
-We borrowed these ideas from it, without its code: the deterministic clock, the
-`xterm-ghostty` terminal identity, golden frames checked on every platform, upstream
-VHS tapes as conformance tests, and the `validate` and `doctor` commands.
+[foley](https://github.com/GH-Jaider/foley) takes the same approach and came first. We borrowed these ideas from it, without its code: the deterministic clock, the `xterm-ghostty` terminal identity, golden frames checked on every platform, upstream VHS tapes as conformance tests, and the `validate` and `doctor` commands.
 
 ## License
 

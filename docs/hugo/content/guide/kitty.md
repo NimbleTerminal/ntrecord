@@ -22,7 +22,9 @@ The repository's `examples/kitty.tape` records a small program that shows an ima
 
 ## What does not
 
-Animation frames, relative placements, and images sent through shared memory or files are not supported. Programs that offer a choice should be told to send the image data directly. An image sent over a shared-memory or file transport will not be shown.
+Animation frames, relative placements, and images sent through shared memory or files are not supported. If a program lets you choose how it sends images, choose direct transfer; an image sent through shared memory or a file will not be shown.
+
+Text is drawn with the built-in font, which has no braille patterns, rounded box corners, or CJK characters. A chart that draws with braille shows replacement marks unless you pick a font that has them with `Set FontFamily` (see [How it looks](../appearance/)).
 
 ## Make the program use graphics
 

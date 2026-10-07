@@ -40,7 +40,7 @@ sigmamax starts the shell with a simple prompt, but a shell's startup files can 
 
 ## A character shows as a replacement mark or is missing
 
-The built-in font, Go Mono, has no symbols for icon fonts, CJK text, or emoji, and sigmamax does not substitute another font. Use `Set FontFamily` with a font that has them (an installed family, or a `.ttf`/`.otf` file).
+The built-in font, Go Mono, has no icon-font symbols, braille patterns, rounded box corners, CJK text, or emoji, and sigmamax does not fall back to another font. Use `Set FontFamily` with a font that has them (an installed family, or a `.ttf`/`.otf` file).
 
 ## The GIF is huge
 
