@@ -1,0 +1,118 @@
+name: Release
+on:
+  push:
+    tags: ['v*']
+  pull_request:
+    paths:
+      - .goreleaser.yaml
+      - .github/workflows/release.yml
+      - scripts/**
+      - internal/tools/**
+      - go.mod
+      - go.sum
+      - Taskfile.yml
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  # macOS supplies the SDK for both Darwin architectures; Zig builds Linux.
+  # Snapshots and manual runs never publish or require signing/tap secrets.
+  package:
+    runs-on: macos-15
+    timeout-minutes: 45
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        with:
+          persist-credentials: false
+          fetch-depth: 0
+      - uses: actions/setup-go@b7ad1dad31e06c5925ef5d2fc7ad053ef454303e # v7
+        with:
+          go-version-file: go.mod
+      - uses: goreleaser/goreleaser-action@f06c13b6b1a9625abc9e6e439d9c05a8f2190e94 # v7
+        with:
+          version: v2.16.0
+          args: release --snapshot --clean --skip=notarize
+      - uses: actions/upload-artifact@v4
+        with:
+          name: release-snapshot
+          path: |
+            dist/*.tar.gz
+            dist/checksums.txt
+          if-no-files-found: error
+
+  smoke:
+    needs: package
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - runner: macos-15
+            target: darwin_arm64
+          - runner: macos-15-intel
+            target: darwin_amd64
+          - runner: ubuntu-24.04
+            target: linux_amd64
+          - runner: ubuntu-24.04-arm
+            target: linux_arm64
+    runs-on: ${{ matrix.runner }}
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        with:
+          persist-credentials: false
+      - uses: actions/setup-go@b7ad1dad31e06c5925ef5d2fc7ad053ef454303e # v7
+        with:
+          go-version-file: go.mod
+      - uses: actions/download-artifact@v4
+        with:
+          name: release-snapshot
+          path: dist
+      - name: Verify and exercise the packaged binary (no native build tools)
+        env:
+          RELEASE_TARGET: ${{ matrix.target }}
+          CGO_ENABLED: '0'
+          GOWORK: 'off'
+        run: |
+          cd dist
+          shasum -a 256 -c checksums.txt
+          mkdir unpacked
+          tar -xzf sigmamax_*_"${RELEASE_TARGET}".tar.gz -C unpacked
+          cd ..
+          go run ./internal/tools/release-smoke "$PWD/dist/unpacked/sigmamax"
+
+  release:
+    if: github.event_name == 'push' && startsWith(github.ref, 'refs/tags/v')
+    needs: smoke
+    runs-on: macos-15
+    timeout-minutes: 60
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        with:
+          persist-credentials: false
+          fetch-depth: 0
+      - uses: actions/setup-go@b7ad1dad31e06c5925ef5d2fc7ad053ef454303e # v7
+        with:
+          go-version-file: go.mod
+      - uses: go-task/setup-task@a00fbb05ce67b35648be3c78cbc9fd85354c757e # v2
+        with:
+          version: 3.54.0
+      - run: brew list ffmpeg >/dev/null 2>&1 || brew install ffmpeg
+      - run: task ci
+        env:
+          SIGMAMAX_REQUIRE_FFMPEG: '1'
+      - uses: goreleaser/goreleaser-action@f06c13b6b1a9625abc9e6e439d9c05a8f2190e94 # v7
+        with:
+          version: v2.16.0
+          args: release --clean
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+          HOMEBREW_TAP_GITHUB_TOKEN: ${{ secrets.HOMEBREW_TAP_GITHUB_TOKEN }}
+          MACOS_SIGN_P12: ${{ secrets.MACOS_SIGN_P12 }}
+          MACOS_SIGN_PASSWORD: ${{ secrets.MACOS_SIGN_PASSWORD }}
+          MACOS_NOTARY_KEY: ${{ secrets.MACOS_NOTARY_KEY }}
+          MACOS_NOTARY_KEY_ID: ${{ secrets.MACOS_NOTARY_KEY_ID }}
+          MACOS_NOTARY_ISSUER_ID: ${{ secrets.MACOS_NOTARY_ISSUER_ID }}

@@ -14,6 +14,9 @@ import (
 	"golang.org/x/term"
 )
 
+// version is stamped by GoReleaser and task build VERSION=... .
+var version = "dev"
+
 func main() {
 	// A closed stdout pipe must return EPIPE so Run can save captured frames.
 	// Notify also leaves the normal SIGPIPE disposition for exec'd children.
@@ -27,8 +30,12 @@ func main() {
 }
 
 func run(args []string) error {
+	if len(args) == 1 && (args[0] == "--version" || args[0] == "-version" || args[0] == "version") {
+		fmt.Println("sigmamax", version)
+		return nil
+	}
 	if len(args) == 0 || args[0] == "-h" || args[0] == "--help" {
-		fmt.Println("Usage: sigmamax <file.tape>\n       sigmamax record [-o output] [-shell executable] [-cols n] [-rows n] [-font-size pixels] [-- command args...]")
+		fmt.Println("Usage: sigmamax --version\n       sigmamax <file.tape>\n       sigmamax record [-o output] [-shell executable] [-cols n] [-rows n] [-font-size pixels] [-- command args...]")
 		return nil
 	}
 	ctx, stop := signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGTERM)

@@ -1,0 +1,97 @@
+# yaml-language-server: $schema=https://goreleaser.com/static/schema.json
+# Matches gloss: GitHub archives/checksums and NimbleMarkets/homebrew-tap cask.
+# Run on macOS with its SDK: Zig builds Linux targets; clang builds macOS targets.
+version: 2
+project_name: sigmamax
+
+env:
+  - GOWORK=off
+
+metadata:
+  mod_timestamp: '{{ .CommitTimestamp }}'
+
+before:
+  hooks:
+    - sh scripts/prepare-release.sh
+
+builds:
+  - id: sigmamax
+    main: .
+    binary: sigmamax
+    goos: [linux, darwin]
+    goarch: [amd64, arm64]
+    env:
+      - CGO_ENABLED=1
+      - 'CC=sh "{{ .Env.PWD }}/scripts/release-cc.sh"'
+      - 'PKG_CONFIG={{ .Env.PWD }}/scripts/release-pkg-config.sh'
+    flags: [-trimpath, -mod=readonly]
+    ldflags:
+      - -s -w -X main.version=v{{ .Version }}
+    mod_timestamp: '{{ .CommitTimestamp }}'
+
+archives:
+  - id: default
+    ids: [sigmamax]
+    formats: [tar.gz]
+    name_template: '{{ .ProjectName }}_{{ .Version }}_{{ .Os }}_{{ .Arch }}'
+    files:
+      - README.md
+      - LICENSE
+      - FONT-LICENSE
+      - src: internal/theme/LICENSE
+        dst: licenses/vhs-themes/LICENSE
+      - src: .deps/release/licenses/**
+        dst: licenses
+        strip_parent: true
+
+checksum:
+  name_template: checksums.txt
+
+changelog:
+  sort: asc
+  filters:
+    exclude: ['^docs:', '^test:', '^ci:']
+
+release:
+  github:
+    owner: NimbleMarkets
+    name: sigmamax
+  prerelease: auto
+
+notarize:
+  macos:
+    - enabled: '{{ isEnvSet "MACOS_SIGN_P12" }}'
+      ids: [sigmamax]
+      sign:
+        certificate: '{{ .Env.MACOS_SIGN_P12 }}'
+        password: '{{ .Env.MACOS_SIGN_PASSWORD }}'
+      notarize:
+        issuer_id: '{{ .Env.MACOS_NOTARY_ISSUER_ID }}'
+        key_id: '{{ .Env.MACOS_NOTARY_KEY_ID }}'
+        key: '{{ .Env.MACOS_NOTARY_KEY }}'
+        wait: true
+        timeout: 20m
+
+homebrew_casks:
+  - name: sigmamax
+    ids: [default]
+    repository:
+      owner: NimbleMarkets
+      name: homebrew-tap
+      branch: main
+      token: '{{ .Env.HOMEBREW_TAP_GITHUB_TOKEN }}'
+    commit_author:
+      name: goreleaserbot
+      email: goreleaserbot@nimble.markets
+    homepage: https://github.com/NimbleMarkets/sigmamax
+    description: Record terminal sessions and Kitty graphics to GIF, MP4, or WebM
+    license: MIT
+    skip_upload: auto
+    binaries: [sigmamax]
+    caveats: |
+      GIF recording is self-contained. MP4 and WebM output require ffmpeg:
+        brew install ffmpeg
+    custom_block: |
+      on_macos do
+        depends_on macos: ">= :ventura"
+      end

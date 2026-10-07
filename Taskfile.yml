@@ -1,6 +1,7 @@
 version: '3'
 
 vars:
+  VERSION: '{{.VERSION | default "dev"}}'
   GHOSTTY_PREFIX: '{{.GHOSTTY_PREFIX | default (printf "%s/.deps/libghostty-vt" .ROOT_DIR)}}'
 
 env:
@@ -28,7 +29,9 @@ tasks:
     deps: [native-check]
     # Let Go handle caching: native libraries, compiler flags, and workspace
     # dependencies can change outside Task's source globs.
-    cmds: [go build -mod=readonly -trimpath -o bin/sigmamax .]
+    env:
+      SIGMAMAX_VERSION: '{{.VERSION}}'
+    cmds: ['go build -mod=readonly -trimpath -ldflags "-X main.version=$SIGMAMAX_VERSION" -o bin/sigmamax .']
   run:
     desc: Run sigmamax (pass a tape path or CLI arguments after --)
     interactive: true
@@ -44,8 +47,8 @@ tasks:
     deps: [native-check]
     cmds: [go install -mod=readonly -trimpath .]
   clean:
-    desc: Remove binaries and Task state (keep dependencies and recordings)
-    cmds: [rm -rf bin .task]
+    desc: Remove binaries, release archives, and Task state (keep dependencies and recordings)
+    cmds: [rm -rf bin dist .task]
   clean:all:
     desc: Also remove project-local tools, native libraries, downloads, and Zig caches
     cmds:
@@ -134,3 +137,12 @@ tasks:
     desc: Record the VHS language demo, text checkpoints, and PNG screenshot
     deps: [build]
     cmds: [bin/sigmamax examples/language.tape]
+
+  release:
+    desc: Package a snapshot in dist on macOS, publishing nothing
+    env:
+      GOWORK: 'off'
+    cmds: [goreleaser release --snapshot --clean --skip=notarize]
+  release-check:
+    desc: Check the GoReleaser configuration
+    cmds: [goreleaser check]

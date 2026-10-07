@@ -6,6 +6,28 @@ real PTY, feeds its bytes into libghostty-vt, and composites pixels in Go.
 There is no browser backend, ttyd, xterm.js, headless Chrome, or ghostty-web.
 It is not a fork of VHS or a patch to EVP.
 
+## Install
+
+Release packaging uses the same Homebrew tap as gloss. Once the first tagged
+release is published, install on macOS (13+) or Linux, Intel or ARM, with:
+
+```sh
+brew install --cask nimblemarkets/tap/sigmamax
+sigmamax --version
+```
+
+The release binaries include libghostty-vt and the default font. GIF recording
+needs no additional tools. For MP4/WebM, also install `ffmpeg`:
+
+```sh
+brew install ffmpeg
+```
+
+Release archives and SHA-256 checksums are published to
+[GitHub Releases](https://github.com/NimbleMarkets/sigmamax/releases). Linux
+binaries use static musl; macOS binaries use the system libraries. Neither
+requires Zig, pkg-config, or a separate Ghostty installation at runtime.
+
 ## Build
 
 Requires Go 1.26+, [Task](https://taskfile.dev/), a C compiler/SDK, `make`,
@@ -58,7 +80,7 @@ report version 0.16.0. Tool versions, source revision, and archive checksums are
 pinned in `scripts/native-common.sh` and `scripts/bootstrap-tools.sh`.
 
 ```sh
-task clean       # remove bin/ and .task/; keep dependencies and recordings
+task clean       # remove bin/, dist/, .task/; keep dependencies and recordings
 task build       # reuse the local native dependencies
 task clean:all   # also remove all of .deps/ (downloads, tools, libraries, caches)
 task build       # reproduce the first build from scratch
@@ -359,8 +381,7 @@ matching GitHub Actions. CI starts without `.deps/`, runs `task build`, `task ci
 `task demos`, and `task demo:video` on macOS/Linux, then checks `task clean` followed by a rebuild.
 It uses the same pinned tool bootstrap as local development. This workflow
 installs FFmpeg, requires video tests with `SIGMAMAX_REQUIRE_FFMPEG=1`, and uploads
-demo GIFs/MP4s/WebMs plus the language screenshot/text; release publishing is not configured. The Makefile
-delegates to Task.
+demo GIFs/MP4s/WebMs plus the language screenshot/text. The Makefile delegates to Task.
 
 Set `GHOSTTY_PREFIX=/absolute/path` to use another native install prefix, or
 set `PKG_CONFIG_PATH` to its pkg-config directory. `PKG_CONFIG` and `ZIG` can
@@ -382,6 +403,36 @@ Compatibility tests parse the pinned upstream VHS command/settings examples
 and the all-commands fixture. End-to-end tests exercise real PTY input, waits,
 clipboard paste, screenshots, text checkpoints, and multiple outputs. Upstream
 fixtures and theme data retain Charm's MIT license and theme author metadata.
+
+## Releases and Homebrew
+
+Like gloss, GoReleaser publishes archives/checksums to GitHub Releases and a
+`sigmamax` cask to `NimbleMarkets/homebrew-tap`. Release builds run on macOS with
+the Command Line Tools SDK. The pinned Zig compiler builds four separate static
+libghostty-vt archives; cgo then links the matching archive into each macOS/Linux,
+amd64/arm64 binary. Target-specific pkg-config paths prevent linking the host
+library into a cross-compiled binary. Dependency licenses accompany each archive.
+
+With [GoReleaser](https://goreleaser.com/) 2.16.0 installed:
+
+```sh
+task release-check
+task release           # macOS: build an unsigned snapshot in dist/, publish nothing
+```
+
+The release workflow packages pull requests that change the packaging, and can
+also be run manually as a snapshot. It extracts the archives on all four native
+platforms and checks the version, text GIFs, and Kitty PNG GIFs without installing
+libghostty. A pushed `v*` tag publishes only after those checks and `task ci` pass.
+Snapshots and prereleases do not update Homebrew.
+
+Configure the same repository secrets as gloss before publishing:
+
+- `HOMEBREW_TAP_GITHUB_TOKEN`: token with contents write access to
+  `NimbleMarkets/homebrew-tap`. GitHub supplies `GITHUB_TOKEN` for this repo's release.
+- For signed/notarized macOS binaries: `MACOS_SIGN_P12`, `MACOS_SIGN_PASSWORD`,
+  `MACOS_NOTARY_KEY`, `MACOS_NOTARY_KEY_ID`, and `MACOS_NOTARY_ISSUER_ID`.
+  Signing is enabled when `MACOS_SIGN_P12` is set. Local snapshots skip it.
 
 ## Acknowledgements
 
