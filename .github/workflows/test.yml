@@ -45,3 +45,30 @@ jobs:
             examples/*.webm
             examples/language.png
             examples/language.txt
+
+  # The same terminal state must draw the same pixels everywhere. Each platform
+  # checks the committed hashes in internal/render/testdata/golden, so passing on
+  # all four means macOS and Linux, amd64 and arm64, render byte-identical frames.
+  golden:
+    timeout-minutes: 30
+    strategy:
+      fail-fast: false
+      matrix:
+        runner: [ubuntu-latest, ubuntu-24.04-arm, macos-latest, macos-15-intel]
+    runs-on: ${{ matrix.runner }}
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-go@v7
+        with:
+          go-version-file: go.mod
+      - uses: go-task/setup-task@v2
+        with:
+          version: 3.54.0
+      - run: task test:golden
+        env:
+          SIGMAMAX_GOLDEN_DUMP: ${{ github.workspace }}/golden-frames
+      - uses: actions/upload-artifact@v7
+        if: failure()
+        with:
+          name: golden-frames-${{ matrix.runner }}
+          path: golden-frames

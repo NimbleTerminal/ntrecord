@@ -95,6 +95,14 @@ tasks:
       SIGMAMAX_SHADER_BIN: '{{.SHADERS_BIN}}'
       SIGMAMAX_SHADER_OUTPUT: '{{.OUTPUT | default "examples/shaders.gif"}}'
     cmds: [go test -mod=readonly -count=1 -run '^TestNTChartsShaderContinuity$' -v .]
+  test:golden:
+    desc: Check the renderer's golden frames, as CI does on four platforms (see docs/development.md)
+    deps: [native-check]
+    cmds: ['go test -mod=readonly -count=1 -run "Golden|FaceMatches" {{.CLI_ARGS}} ./internal/render']
+  test:fma:
+    desc: Re-run the golden frames with FMA fusion off, imitating amd64 arithmetic on arm64
+    deps: [native-check]
+    cmds: ['sh scripts/test-fma.sh']
   test-race:
     desc: Run tests with race detection
     deps: [native-check]

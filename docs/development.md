@@ -130,6 +130,33 @@ and the all-commands fixture. End-to-end tests exercise real PTY input, waits,
 clipboard paste, screenshots, text checkpoints, and multiple outputs. Upstream
 fixtures and theme data retain Charm's MIT license and theme author metadata.
 
+## Deterministic rendering
+
+A frame is a pure function of terminal state and the embedded font, so the same
+state must draw the same pixels on macOS and Linux, amd64 and arm64.
+`internal/render/golden_frames_test.go` pins that: it draws a dozen scenarios
+(text styles, box drawing, themes and window decorations, fractional and 96 px
+fonts, cursors, Kitty images and placeholders) and compares each frame's SHA-256
+with `testdata/golden/frames.sha256`. The `golden` CI job runs it on four
+platforms, so all four must produce the committed hashes.
+
+```sh
+task test:golden                                   # check the hashes
+SIGMAMAX_UPDATE_GOLDEN=1 task test:golden          # rewrite them after an intended change
+SIGMAMAX_GOLDEN_DUMP=/tmp/frames task test:golden  # also write the frames as PNGs
+task test:fma                                      # arm64 only: fusion off, imitating amd64
+```
+
+Review the PNGs before committing new hashes: a changed hash is a changed picture.
+
+The check has already found a bug. arm64 fuses `a*b + c` into one rounding and
+amd64 does not, and `golang.org/x/image/vector` curve flattening (`lerp`) is
+unguarded, so large glyphs differed by an alpha step in a few pixels. `render/face.go`
+therefore flattens curves itself with `float32(a*b)` conversions, and
+`TestFaceMatchesOpentype` holds it to the original. Keep that conversion wherever a
+product feeds a sum in the render path. To find a fusion site that matters, bisect
+it: `bisect -compile=fma task test:golden` (`golang.org/x/tools/cmd/bisect`).
+
 ## Package boundaries
 
 `internal/boundaries` is a test that fails when a package imports more than its
