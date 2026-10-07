@@ -40,6 +40,11 @@ tasks:
     interactive: true
     deps: [build]
     cmds: ['bin/sigmamax {{.CLI_ARGS}}']
+  play:
+    desc: Play an asciicast in a Kitty-capable terminal
+    interactive: true
+    deps: [build]
+    cmds: ['bin/sigmamax play {{.CLI_ARGS}}']
   record:
     desc: Record a live PTY (pass recorder flags and command after --)
     interactive: true

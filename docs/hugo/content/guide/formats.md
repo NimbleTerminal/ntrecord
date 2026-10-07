@@ -38,8 +38,22 @@ sigmamax render session.cast -o session.mp4 -font-size 24 -speed 2
 `render` reads asciicast v2/v3 without running the recorded commands. It uses the
 recording's grid and initial colors; `-theme` overrides those colors. `-font`,
 `-font-size`, `-fps`, and `-cursor-blink` control its appearance. It can also export
-PNG frame directories and the final screen as text. An interactive viewer is not
-included yet.
+PNG frame directories and the final screen as text. For interactive terminal playback:
+
+```sh
+sigmamax play session.cast
+sigmamax play session.cast -paused
+```
+
+Use Space to pause/resume, Left/Right to seek five seconds, R to restart,
+Home/End to jump to the beginning/end, +/- to change speed, and Q or Ctrl-C to
+quit. Playback holds on the last frame when finished.
+
+The player displays sigmamax-rendered images in a Kitty-capable terminal, such as
+Kitty or Ghostty. Run directly in the terminal; tmux passthrough is not supported.
+Text is part of the rendered image. Resizing the host terminal fits the display
+without changing the recorded grid. Backward seeks replay from the beginning to
+reconstruct terminal and image state.
 
 Casts follow the tape's realtime or deterministic clock. `Hide`, `ScrollUp`, and
 `ScrollDown` are not supported with cast output and fail before recording starts.

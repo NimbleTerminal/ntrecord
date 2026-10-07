@@ -35,6 +35,7 @@ func main() {
 
 const usage = `Usage: sigmamax [-mode realtime|deterministic] <file.tape>
        sigmamax record [-o output] [-shell executable] [-cols n] [-rows n] [-font-size pixels] [-- command args...]
+       sigmamax play <file.cast> [-paused] [-speed n]
        sigmamax render <file.cast> -o <output> [-font-size pixels] [-fps n] [-speed n]
        sigmamax validate <file.tape>...
        sigmamax doctor
@@ -68,6 +69,9 @@ func run(args []string, stdout, stderr io.Writer) error {
 	}
 	ctx, stop := signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGTERM)
 	defer stop()
+	if args[0] == "play" {
+		return playCast(ctx, args[1:], stderr)
+	}
 	if args[0] == "render" {
 		return renderCast(ctx, args[1:], stderr)
 	}

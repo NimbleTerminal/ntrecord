@@ -163,3 +163,25 @@ Tests cover split UTF-8, v2/v3 clocks, large inline events, malformed input,
 deterministic recording, cancellation, finalization after child failure,
 unsupported tape edits, destination preservation, and PTY-to-cast-to-PNG Kitty
 pixels. CLI tests cover both flag orders accepted by `render`.
+
+## Terminal player
+
+`internal/playback` streams casts through the same renderer for arbitrary
+positions in recorded time. It scans once for duration and format validation;
+backward seeks reset the renderer and replay events, retaining earlier Kitty
+uploads. Its clock handles pause, speed changes and the end of a recording.
+
+`internal/player` owns `/dev/tty`, raw input, Kitty capability detection, keyboard
+controls and the alternate screen. It encodes rendered frames as PNG, sends
+4096-byte base64 chunks, and alternates two image IDs so replacing an image does
+not clear the currently displayed frame mid-upload. It deletes only its own
+images and restores terminal state on every exit. No browser, GUI library or
+external viewer is involved. The module already used `x/sys`; it is now a direct
+dependency for polling terminal input.
+
+Replay tests check backward/forward seeking across image uploads/deletions and
+synchronized updates. Transport tests reconstruct PNGs from emitted chunks. PTY
+tests drive capability replies, playback keys and host resizing, and verify
+terminal restoration after quit, cancellation and a rejected capability probe.
+A subprocess test opens `/dev/tty` through its own controlling terminal, matching
+the CLI: macOS requires `select` here because `poll` only works on the PTY slave.

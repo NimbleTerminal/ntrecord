@@ -29,10 +29,12 @@ type rule struct {
 // rules is the allow-list. A new package must be added here, which is the
 // moment to decide what it may depend on.
 var rules = map[string]rule{
-	".":                  {internal: []string{"internal/doctor", "internal/encode", "internal/record", "internal/tape"}, external: []string{"golang.org/x/term"}},
+	".":                  {internal: []string{"internal/doctor", "internal/encode", "internal/player", "internal/record", "internal/tape"}, external: []string{"golang.org/x/term"}},
 	"internal/doctor":    {internal: []string{"internal/encode", "internal/render", "internal/tape", "internal/terminfo"}, external: []string{"github.com/creack/pty"}, exec: true},
 	"internal/encode":    {internal: []string{"internal/gifencode"}, exec: true},
 	"internal/gifencode": {},
+	"internal/playback":  {internal: []string{"internal/asciicast", "internal/render", "internal/tape"}},
+	"internal/player":    {internal: []string{"internal/playback", "internal/tape"}, external: []string{"golang.org/x/term", "golang.org/x/sys/unix"}},
 	"internal/asciicast": {}, // standard-library event codec, independent of rendering
 	"internal/record":    {internal: []string{"internal/asciicast", "internal/encode", "internal/render", "internal/tape", "internal/terminfo"}, external: []string{"github.com/creack/pty"}, exec: true},
 	// The only package that may import libghostty, so cgo stays behind one door.

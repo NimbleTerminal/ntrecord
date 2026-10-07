@@ -73,7 +73,31 @@ frame directories, and a final text screen. It runs offline without a PTY or she
 Use `-font`, `-font-size`, `-theme`, `-fps`, `-speed`, and `-cursor-blink` to control
 the result. The default is Go Mono at 18 pixels and the cast's initial colors.
 Timing is sampled at the selected frame rate; final output gets at least one frame.
-An interactive viewer is not included yet.
+
+Play a cast directly inside a Kitty-capable terminal:
+
+```sh
+sigmamax play session.cast
+sigmamax play session.cast -paused -speed 2
+```
+
+The player uses sigmamax's renderer and displays the resulting frames through
+Kitty graphics. It checks graphics support before switching to an alternate
+screen. Run it directly in Kitty or Ghostty; tmux passthrough and terminals
+without Kitty graphics are not supported in this version. Text is rendered into
+the image, so it is not selectable as terminal text.
+
+- `Space` or `P`: pause/resume; playback starts automatically unless `-paused`.
+- `Left`/`Right` (or `H`/`L`): seek backward/forward five seconds.
+- `Home`/`End`: seek to the beginning/end. `R` restarts and plays.
+- `+`/`-`: change speed (0.1×–16×); `0` restores 1×.
+- `Q`, Ctrl-C, or Ctrl-D: quit and restore the terminal.
+
+At the end the final frame stays on screen until you restart or quit. Resize
+your terminal to fit the display; the recording's grid stays fixed. `-font`,
+`-font-size`, `-theme`, `-fps`, and `-cursor-blink` also work with `play`.
+Backward seeking reconstructs state from the beginning, including earlier image
+uploads; long recordings can take longer to seek. Cast events stream from disk.
 
 Initial limits:
 
