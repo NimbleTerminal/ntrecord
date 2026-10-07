@@ -22,8 +22,6 @@ type atlas struct {
 	width, height, ascent int
 }
 
-func newAtlas(size float64) (*atlas, error) { return newAtlasFamily(size, "Go Mono") }
-
 func newAtlasFamily(size float64, family string) (*atlas, error) {
 	a := &atlas{glyphs: make(map[glyphKey]*image.RGBA)}
 	fonts, err := fontFaces(family)

@@ -19,8 +19,6 @@ import (
 	"github.com/NimbleMarkets/sigmamax/internal/gifencode"
 )
 
-const FramePeriod = 50 * time.Millisecond
-
 // Format validates the output extension without requiring external tools.
 func Format(path string) (string, error) {
 	if strings.HasSuffix(path, "/") {
@@ -37,11 +35,11 @@ func Format(path string) (string, error) {
 // Encoder owns its temporary output and subprocess. Call Abort on every path;
 // Finish atomically publishes the completed file and makes Abort a no-op.
 type Options struct {
+	Framerate  float64
+	LoopOffset string
 	// Seed lists colors a GIF must reproduce exactly (theme background and
 	// foreground first). Other formats ignore it.
 	Seed []color.RGBA
-	Framerate  float64
-	LoopOffset string
 }
 
 type Encoder struct {

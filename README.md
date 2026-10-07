@@ -138,7 +138,7 @@ with no intermediate images or GIF conversion. Output is silent, lossy video
 using `yuv420p` for playback compatibility; it avoids GIF palette quantization,
 though chroma subsampling can soften small colored text. Odd viewport dimensions
 are padded by one pixel on the right/bottom as needed, without resizing text.
-Hidden time is omitted. Video duration is rounded to its configured frame interval (50 ms by default).
+Hidden time is omitted. Video duration is rounded to its configured frame interval (`Framerate`; 50 ms at the default 20 FPS).
 
 Output is written to a temporary file alongside the destination and renamed
 only after successful encoding. Cancellation finalizes captured frames before
