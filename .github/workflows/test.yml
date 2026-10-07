@@ -6,6 +6,7 @@ jobs:
     env:
       SIGMAMAX_REQUIRE_FFMPEG: '1'
     strategy:
+      fail-fast: false
       matrix:
         os: [ubuntu-latest, macos-latest]
     runs-on: ${{ matrix.os }}

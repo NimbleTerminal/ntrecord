@@ -107,7 +107,7 @@ Review the PNGs before committing new hashes. A changed hash means a changed pic
 
 The check has already found a bug. arm64 fuses `a*b + c` into a single rounding and amd64 does not. The curve flattening in `golang.org/x/image/vector` (`lerp`) does not guard against this, so large glyphs differed by one alpha step in a few pixels. `render/face.go` therefore flattens curves itself with `float32(a*b)` conversions, and `TestFaceMatchesOpentype` holds it to the original. Keep that conversion wherever a product feeds a sum in the render path. To find which fusion site matters, bisect it with `bisect -compile=fma task test:golden` (from `golang.org/x/tools/cmd/bisect`).
 
-Deterministic recording (`-mode deterministic`) has its own tests in `internal/record/deterministic_test.go`: three runs of one tape must produce the same GIF bytes while 5 s of `Sleep` costs almost no real time. If one ever fails intermittently, suspect the settle window (`settleQuiet` in `record.go`) first.
+Deterministic recording (`-mode deterministic`) has its own tests in `internal/record/deterministic_test.go`: three runs of one tape must produce the same GIF bytes while 5 s of `Sleep` costs almost no real time. The virtual-sleep control test checks that long sleeps become holds without waiting for wall time; GIF encoding speed is not a correctness assertion. If byte identity fails intermittently, inspect the settle window (`settleQuiet` in `record.go`) first.
 
 ## Package boundaries
 
@@ -185,3 +185,7 @@ tests drive capability replies, playback keys and host resizing, and verify
 terminal restoration after quit, cancellation and a rejected capability probe.
 A subprocess test opens `/dev/tty` through its own controlling terminal, matching
 the CLI: macOS requires `select` here because `poll` only works on the PTY slave.
+
+Release archive smoke tests run on macOS and Linux, on both CPU architectures.
+They exercise the extracted binary without native build tools, checking text
+and Kitty image pixels in direct GIF recordings and in cast-to-GIF round trips.

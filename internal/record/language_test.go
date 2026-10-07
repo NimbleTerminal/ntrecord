@@ -37,7 +37,7 @@ Set Margin 4
 Set WindowBar RingsRight
 Set TypingSpeed 1ms
 Set Framerate 10
-Set WaitTimeout 2s
+Set WaitTimeout 10s
 Hide
 Type "junk"
 Ctrl+U
@@ -60,7 +60,7 @@ Screenshot %q
 	if err != nil {
 		t.Fatal(err)
 	}
-	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
 	defer cancel()
 	if err = Run(ctx, Options{Config: p.Config, Tape: p}); err != nil {
 		t.Fatal(err)

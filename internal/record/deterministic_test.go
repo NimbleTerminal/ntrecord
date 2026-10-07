@@ -62,16 +62,15 @@ Enter
 Sleep 2s
 `
 
-// The point of the mode: the same tape gives the same bytes, and virtual time
-// (here 5s of sleeping) costs no real time.
+// The same tape gives the same bytes and retains its virtual duration.
+// Rendering/encoding speed depends on the host and race instrumentation; the
+// clock translation is checked separately without that work.
 func TestDeterministicRecordingsAreByteIdentical(t *testing.T) {
 	var sums [3][32]byte
 	for i := range sums {
 		b, real := runDeterministic(t, sessionTape)
 		sums[i] = sha256.Sum256(b)
-		if real > 4*time.Second {
-			t.Errorf("run %d took %v in real time; 5s of Sleep should be virtual", i, real)
-		}
+		t.Logf("run %d encoded in %v", i, real)
 		if got := playbackTime(t, b); got < 5*time.Second {
 			t.Errorf("run %d plays for %v; the sleeps must still be in the recording", i, got)
 		}
@@ -151,5 +150,38 @@ func TestDeterministicWarnsWhenOutputOutlastsTheTape(t *testing.T) {
 	}
 	if quiet := record("Type \"echo done\"\nEnter\nWait+Screen /(?m)^done$/\nSleep 200ms\n"); quiet != "" {
 		t.Errorf("warned about a tape that waited properly: %q", quiet)
+	}
+}
+
+// Verify that even a one-hour Sleep produces a Hold immediately, rather than
+// timing PTY startup and GIF encoding against an arbitrary wall-clock budget.
+func TestDeterministicSleepProducesHolds(t *testing.T) {
+	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	defer cancel()
+	events := make(chan event)
+	done := make(chan error, 1)
+	go func() { done <- play(ctx, []tape.Action{{Command: "Sleep", Duration: time.Hour}}, events, true) }()
+	var holds []time.Duration
+	for {
+		select {
+		case ev := <-events:
+			if ev.control == nil {
+				t.Fatal("expected a tape control")
+			}
+			if ev.control.action.Command == "Hold" {
+				holds = append(holds, ev.control.action.Duration)
+			}
+			ev.control.ack <- nil
+		case err := <-done:
+			if err != nil {
+				t.Fatal(err)
+			}
+			if len(holds) != 2 || holds[0] != 100*time.Millisecond || holds[1] != time.Hour {
+				t.Fatalf("unexpected virtual holds: %v", holds)
+			}
+			return
+		case <-ctx.Done():
+			t.Fatal("virtual Sleep waited for wall time")
+		}
 	}
 }

@@ -62,35 +62,53 @@ func run() error {
 		}
 		// The payload has no single quotes; printf's format is a constant.
 		script := "printf '%s' '" + payload + "'; sleep 0.2"
-		path := filepath.Join(dir, name+".gif")
-		cmd := exec.CommandContext(ctx, bin, "record", "-o", path, "-cols", "40", "-rows", "8", "--", "/bin/sh", "-c", script)
-		if output, err := cmd.CombinedOutput(); err != nil {
-			return fmt.Errorf("%s recording: %w: %s", name, err, output)
-		}
-		data, err := os.ReadFile(path)
-		if err != nil {
-			return err
-		}
-		g, err := gif.DecodeAll(bytes.NewReader(data))
-		if err != nil {
-			return err
-		}
-		found := false
-		for _, frame := range g.Image {
-			pixels := 0
-			for _, index := range frame.Pix {
-				r, g, b, _ := frame.Palette[index].RGBA()
-				if kitty && r > 0xc000 && g < 0x4000 && b < 0x4000 || !kitty && r > 0xc000 && g > 0xc000 && b > 0xc000 {
-					pixels++
-				}
+		for _, format := range []string{"gif", "cast"} {
+			path := filepath.Join(dir, name+"."+format)
+			cmd := exec.CommandContext(ctx, bin, "record", "-o", path, "-cols", "40", "-rows", "8", "--", "/bin/sh", "-c", script)
+			if output, err := cmd.CombinedOutput(); err != nil {
+				return fmt.Errorf("%s %s recording: %w: %s", name, format, err, output)
 			}
-			found = found || pixels > 100
+			if format == "cast" {
+				rendered := filepath.Join(dir, name+"-cast.gif")
+				cmd = exec.CommandContext(ctx, bin, "render", path, "-o", rendered)
+				if output, err := cmd.CombinedOutput(); err != nil {
+					return fmt.Errorf("%s cast replay: %w: %s", name, err, output)
+				}
+				path = rendered
+			}
+			count, err := verifyGIF(path, kitty)
+			if err != nil {
+				return fmt.Errorf("%s %s: %w", name, format, err)
+			}
+			fmt.Printf("%s %s: %d GIF frames verified\n", name, format, count)
 		}
-		if !found {
-			return fmt.Errorf("%s recording has no expected pixels", name)
-		}
-		fmt.Printf("%s: %d GIF frames verified\n", name, len(g.Image))
 	}
 	fmt.Print(string(version))
 	return nil
+}
+
+func verifyGIF(path string, kitty bool) (int, error) {
+	data, err := os.ReadFile(path)
+	if err != nil {
+		return 0, err
+	}
+	g, err := gif.DecodeAll(bytes.NewReader(data))
+	if err != nil {
+		return 0, err
+	}
+	found := false
+	for _, frame := range g.Image {
+		pixels := 0
+		for _, index := range frame.Pix {
+			r, g, b, _ := frame.Palette[index].RGBA()
+			if kitty && r > 0xc000 && g < 0x4000 && b < 0x4000 || !kitty && r > 0xc000 && g > 0xc000 && b > 0xc000 {
+				pixels++
+			}
+		}
+		found = found || pixels > 100
+	}
+	if !found {
+		return 0, fmt.Errorf("recording has no expected pixels")
+	}
+	return len(g.Image), nil
 }
