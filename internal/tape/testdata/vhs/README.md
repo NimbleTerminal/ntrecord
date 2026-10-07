@@ -1,5 +1,8 @@
-Compatibility fixtures copied unchanged from Charm VHS commit
-`24fa2254a9806091e6ee6a980e9f3bcfe0a9ba53`, under the included MIT license.
+Every `.tape` in Charm VHS at commit `24fa2254a9806091e6ee6a980e9f3bcfe0a9ba53`,
+copied unchanged under its upstream path and covered by the included MIT license.
+`MANIFEST` records each file's git blob SHA-1; a test verifies that the files are
+exactly upstream's.
 
-These are parsed in tests; they are not executed, since some require external
-applications, fonts, or platform-specific shells. End-to-end tests use local fixtures.
+They are parsed in tests, not executed: some need external applications, fonts, or
+platform-specific shells. See `corpus_test.go` for the tapes sigmamax rejects and
+why. End-to-end tests use local fixtures.

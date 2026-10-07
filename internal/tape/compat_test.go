@@ -8,20 +8,6 @@ import (
 	"time"
 )
 
-func TestVHSFixtures(t *testing.T) {
-	paths, err := filepath.Glob("testdata/vhs/*.tape")
-	if err != nil || len(paths) < 30 {
-		t.Fatal("missing compatibility fixtures", err)
-	}
-	for _, path := range paths {
-		t.Run(filepath.Base(path), func(t *testing.T) {
-			if _, err := ParseFile(path); err != nil {
-				t.Fatal(err)
-			}
-		})
-	}
-}
-
 func TestLanguage(t *testing.T) {
 	input := `Output a.gif
 Output a.mp4
@@ -97,6 +83,20 @@ func TestRejectInvalidVHS(t *testing.T) {
 		t.Run(input, func(t *testing.T) {
 			if _, err := Parse(strings.NewReader(input)); err == nil {
 				t.Fatal("accepted invalid tape")
+			}
+		})
+	}
+}
+
+func TestSpacedModifiersAndTiming(t *testing.T) {
+	p, err := Parse(strings.NewReader("Type @ 10 ms \"text\"\nCtrl + Shift + R\nWait + Screen @ 2 s /ready/"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if p.Actions[0].Interval != 10*time.Millisecond || p.Actions[1].Command != "Ctrl+Shift+R" || p.Actions[2].Duration != 2*time.Second {
+		t.Fatalf("bad actions: %+v", p.Actions)
+	}
+}
 
 // VHS tokenizes "Type@.2'text'" as Type, @, .2, 'text': a quoted string needs
 // no space after the timing that precedes it (the jqp example relies on this).
@@ -123,19 +123,5 @@ func TestQuoteMayFollowTimingDirectly(t *testing.T) {
 	// A quote inside an ordinary word is not a timing boundary.
 	if _, err := Parse(strings.NewReader(`Wait+Screen /a'b/`)); err != nil {
 		t.Errorf("regex with a quote: %v", err)
-	}
-}
-			}
-		})
-	}
-}
-
-func TestSpacedModifiersAndTiming(t *testing.T) {
-	p, err := Parse(strings.NewReader("Type @ 10 ms \"text\"\nCtrl + Shift + R\nWait + Screen @ 2 s /ready/"))
-	if err != nil {
-		t.Fatal(err)
-	}
-	if p.Actions[0].Interval != 10*time.Millisecond || p.Actions[1].Command != "Ctrl+Shift+R" || p.Actions[2].Duration != 2*time.Second {
-		t.Fatalf("bad actions: %+v", p.Actions)
 	}
 }

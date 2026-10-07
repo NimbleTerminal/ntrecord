@@ -53,3 +53,22 @@ func TestValidateHonorsEnvPathForRequire(t *testing.T) {
 		t.Fatal(err)
 	}
 }
+
+// Upstream's error examples fail when VHS runs them, not when it parses them.
+// validate catches both before anything is recorded.
+func TestValidateCatchesVHSErrorExamples(t *testing.T) {
+	t.Setenv("PATH", t.TempDir()) // so Require foo and Require bar are missing
+	const dir = "../tape/testdata/vhs/examples/errors/"
+	for file, want := range map[string]string{
+		"dimensions.tape": "grid dimensions", // padding 100 leaves no cells in a 100px window
+		"require.tape":    "Require foo",
+	} {
+		p, err := tape.ParseFile(dir + file)
+		if err != nil {
+			t.Fatalf("%s must parse: %v", file, err)
+		}
+		if _, err = Validate(p); err == nil || !strings.Contains(err.Error(), want) {
+			t.Errorf("%s: validate error %v, want one containing %q", file, err, want)
+		}
+	}
+}
