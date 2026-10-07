@@ -152,6 +152,10 @@ sigmamax supports the VHS tape language on its native renderer. The goal is
 useful script compatibility; font metrics, antialiasing, decorations, and encoded
 pixels follow sigmamax rather than matching VHS screenshots.
 
+**Only run tapes you trust.** A tape runs real programs: `Set Shell`, `Type`, and
+`Env` execute commands with your privileges, and `Output`, `Source`, and
+`Screenshot` read and write files wherever the path points, as in VHS.
+
 Run tapes from the project directory. Shell commands, output paths, font paths,
 and `Source` paths resolve from the invocation directory, including nested
 sources. Source cycles and excessive nesting are errors. Outputs declared inside
