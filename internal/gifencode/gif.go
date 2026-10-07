@@ -14,7 +14,12 @@ import (
 )
 
 type Encoder struct {
+	// Seed lists colors (theme background, foreground, ANSI palette) that must
+	// be represented exactly rather than approximated by the fixed palette.
+	Seed color.Palette
+
 	gif      gif.GIF
+	palette  color.Palette // built from Seed on first use
 	previous []byte
 	elapsed  time.Duration
 	ticks    int
@@ -46,10 +51,10 @@ func (e *Encoder) Add(frame *image.RGBA, duration time.Duration) error {
 	if e.bytes+int64(frame.Rect.Dx()*frame.Rect.Dy()) > 512*1024*1024 {
 		return fmt.Errorf("recording exceeds 512 MiB of unique GIF frames; use a smaller viewport or shorter session")
 	}
-	colors := append(color.Palette(nil), palette.Plan9...)
-	// Preserve default colors without replacing pure black (0) or white (255).
-	colors[253], colors[254] = color.RGBA{24, 26, 32, 255}, color.RGBA{224, 228, 235, 255}
-	p := image.NewPaletted(frame.Bounds(), colors)
+	if e.palette == nil {
+		e.palette = buildPalette(e.Seed)
+	}
+	p := image.NewPaletted(frame.Bounds(), e.palette)
 	draw.FloydSteinberg.Draw(p, p.Bounds(), frame, frame.Bounds().Min)
 	e.bytes += int64(len(p.Pix))
 	e.previous = append(e.previous[:0], frame.Pix...)
@@ -60,6 +65,49 @@ func (e *Encoder) Add(frame *image.RGBA, duration time.Duration) error {
 		delay -= n
 	}
 	return nil
+}
+
+// defaultSeed is sigmamax's built-in terminal background and foreground.
+var defaultSeed = color.Palette{color.RGBA{24, 26, 32, 255}, color.RGBA{224, 228, 235, 255}}
+
+// buildPalette returns the 256-color Plan9 palette with each seed color made
+// exact: a seed missing from the palette replaces the nearest entry that is
+// not pure black, pure white, or an earlier seed. Earlier seeds win, so list
+// the background and foreground first. Exact entries dither to flat regions.
+func buildPalette(seed color.Palette) color.Palette {
+	if len(seed) == 0 {
+		seed = defaultSeed
+	}
+	colors := append(color.Palette(nil), palette.Plan9...)
+	locked := make([]bool, len(colors))
+	locked[0], locked[len(colors)-1] = true, true // Plan9 black and white
+	for _, c := range seed {
+		want := rgba8(c)
+		best, bestDist := -1, 0
+		for i, existing := range colors {
+			have := rgba8(existing)
+			if have == want {
+				locked[i], best = true, -1
+				break
+			}
+			if locked[i] {
+				continue
+			}
+			dr, dg, db := int(have.R)-int(want.R), int(have.G)-int(want.G), int(have.B)-int(want.B)
+			if d := dr*dr + dg*dg + db*db; best < 0 || d < bestDist {
+				best, bestDist = i, d
+			}
+		}
+		if best >= 0 {
+			colors[best], locked[best] = want, true
+		}
+	}
+	return colors
+}
+
+func rgba8(c color.Color) color.RGBA {
+	r, g, b, _ := c.RGBA()
+	return color.RGBA{uint8(r >> 8), uint8(g >> 8), uint8(b >> 8), 255}
 }
 
 func (e *Encoder) Encode(w io.Writer) error {

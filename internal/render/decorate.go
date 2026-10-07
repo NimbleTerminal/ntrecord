@@ -48,6 +48,39 @@ func (r *Renderer) applyTheme(c tape.Config) error {
 	return r.term.SetColorPalette(palette)
 }
 
+// windowBarColors are the close/minimize/maximize dots, left to right.
+var windowBarColors = []color.RGBA{{255, 95, 86, 255}, {255, 189, 46, 255}, {39, 201, 63, 255}}
+
+// PaletteSeed lists the colors a palette-limited encoder should reproduce
+// exactly: terminal background and foreground first, then the cursor, ANSI
+// palette, margin fill and window-bar dots. Photographic Kitty images and
+// antialiased text are expected to be approximated.
+func (r *Renderer) PaletteSeed() []color.RGBA {
+	var seed []color.RGBA
+	add := func(c *vt.ColorRGB, err error) {
+		if err == nil && c != nil {
+			seed = append(seed, color.RGBA{c.R, c.G, c.B, 255})
+		}
+	}
+	add(r.term.ColorBackground())
+	add(r.term.ColorForeground())
+	add(r.term.ColorCursor())
+	if palette, err := r.term.ColorPalette(); err == nil {
+		for _, c := range palette[:16] {
+			add(&c, nil)
+		}
+	}
+	if r.config.MarginFill != "" {
+		if c, err := theme.Color(r.config.MarginFill); err == nil {
+			seed = append(seed, c)
+		}
+	}
+	if r.barHeight > 0 {
+		seed = append(seed, windowBarColors...)
+	}
+	return seed
+}
+
 // OutputSize includes decoration; Width/Height remain the PTY's pixel size.
 func (r *Renderer) OutputSize() (int, int) { return r.outputWidth, r.outputHeight }
 
@@ -74,8 +107,7 @@ func (r *Renderer) decorate(src *image.RGBA, bg color.RGBA) *image.RGBA {
 			x = win.Max.X - c.Padding - 8 - radius - 2*gap
 		}
 		y := win.Min.Y + r.barHeight/2
-		colors := []color.RGBA{{255, 95, 86, 255}, {255, 189, 46, 255}, {39, 201, 63, 255}}
-		for i, cc := range colors {
+		for i, cc := range windowBarColors {
 			for yy := -radius; yy <= radius; yy++ {
 				for xx := -radius; xx <= radius; xx++ {
 					d := xx*xx + yy*yy

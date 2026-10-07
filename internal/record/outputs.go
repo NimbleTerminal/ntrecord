@@ -27,8 +27,9 @@ func newOutputs(c tape.Config, r *render.Renderer) (*outputs, error) {
 		rate = 20
 	}
 	w, h := r.OutputSize()
+	seed := r.PaletteSeed()
 	for _, path := range c.Destinations() {
-		e, err := encode.NewWithOptions(path, w, h, encode.Options{Framerate: rate, LoopOffset: c.LoopOffset})
+		e, err := encode.NewWithOptions(path, w, h, encode.Options{Framerate: rate, LoopOffset: c.LoopOffset, Seed: seed})
 		if err != nil {
 			o.Abort()
 			return nil, err

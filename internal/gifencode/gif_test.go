@@ -55,3 +55,70 @@ func TestPalettePreservesWhiteAndDefaults(t *testing.T) {
 		}
 	}
 }
+
+func encodeDecode(t *testing.T, e *Encoder) *gif.GIF {
+	t.Helper()
+	var b bytes.Buffer
+	if err := e.Encode(&b); err != nil {
+		t.Fatal(err)
+	}
+	g, err := gif.DecodeAll(&b)
+	if err != nil {
+		t.Fatal(err)
+	}
+	return g
+}
+
+// A theme's flat background is not in the fixed palette. Without seeding it,
+// dithering turns it into noise and bloats the file.
+func TestSeededColorsAreExactAndFlat(t *testing.T) {
+	bg, fg := color.RGBA{30, 30, 46, 255}, color.RGBA{205, 214, 244, 255}
+	ansi := color.RGBA{243, 139, 168, 255}
+	e := Encoder{Seed: color.Palette{bg, fg, ansi}}
+	f := image.NewRGBA(image.Rect(0, 0, 32, 32))
+	for y := 0; y < 32; y++ {
+		for x := 0; x < 32; x++ {
+			f.SetRGBA(x, y, bg)
+		}
+	}
+	f.SetRGBA(1, 1, fg)
+	f.SetRGBA(2, 1, ansi)
+	if err := e.Add(f, time.Second); err != nil {
+		t.Fatal(err)
+	}
+	im := encodeDecode(t, &e).Image[0]
+	seen := map[color.RGBA]int{}
+	for y := 0; y < 32; y++ {
+		for x := 0; x < 32; x++ {
+			seen[color.RGBAModel.Convert(im.At(x, y)).(color.RGBA)]++
+		}
+	}
+	if len(seen) != 3 || seen[bg] != 32*32-2 || seen[fg] != 1 || seen[ansi] != 1 {
+		t.Fatalf("seeded colors not preserved exactly: %v", seen)
+	}
+}
+
+func TestSeedKeepsBlackWhiteAndFullPalette(t *testing.T) {
+	var seed color.Palette
+	for i := 0; i < 20; i++ {
+		seed = append(seed, color.RGBA{uint8(i*12 + 1), uint8(i*7 + 3), uint8(255 - i*11), 255})
+	}
+	e := Encoder{Seed: seed}
+	want := append([]color.RGBA{{0, 0, 0, 255}, {255, 255, 255, 255}}, color.RGBA{seed[3].(color.RGBA).R, seed[3].(color.RGBA).G, seed[3].(color.RGBA).B, 255})
+	f := image.NewRGBA(image.Rect(0, 0, len(want), 1))
+	for x, c := range want {
+		f.SetRGBA(x, 0, c)
+	}
+	if err := e.Add(f, time.Second); err != nil {
+		t.Fatal(err)
+	}
+	g := encodeDecode(t, &e)
+	if n := len(g.Image[0].Palette); n != 256 {
+		t.Errorf("palette has %d entries, want 256", n)
+	}
+	for x, c := range want {
+		if got := color.RGBAModel.Convert(g.Image[0].At(x, 0)); got != c {
+			t.Errorf("pixel %d: %v, want %v", x, got, c)
+		}
+	}
+}

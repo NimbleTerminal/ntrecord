@@ -92,8 +92,9 @@ binary, delete recordings, or remove an external `GHOSTTY_PREFIX`.
 The unmodified `go.mitchellh.com/libghostty` binding uses **cgo and static
 libghostty-vt linking** by default, through `libghostty-vt-static.pc`. There is
 no purego rebinding. The resulting binary needs no Ghostty shared library,
-external font file, or GIF encoder. GIFs use Go's encoder and a dithered palette;
-image colors may be quantized.
+external font file, or GIF encoder. GIFs use Go's encoder and a 256-color palette that reserves the theme's
+background, foreground, cursor, ANSI, margin and window-bar colors, so they stay
+exact and flat; other colors (antialiasing, images) are dithered and quantized.
 
 For a Linux amd64 cross-build from a supported Zig host:
 
@@ -115,7 +116,7 @@ The filename extension selects the encoder in both tape `Output` and live
 
 | Extension | Encoder | Runtime requirement |
 | --- | --- | --- |
-| `.gif` | Go GIF encoder, dithered 256-color palette | None beyond sigmamax |
+| `.gif` | Go GIF encoder, 256-color palette with exact theme colors, dithered | None beyond sigmamax |
 | `.mp4` | H.264 (`libx264`), CRF 18, fast-start MP4 | FFmpeg on `PATH` |
 | `.webm` | VP9 (`libvpx-vp9`), CRF 30 | FFmpeg on `PATH` |
 

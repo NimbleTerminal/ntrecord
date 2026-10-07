@@ -5,6 +5,7 @@ import (
 	"context"
 	"fmt"
 	"image"
+	"image/color"
 	"image/png"
 	"math"
 	"os"
@@ -36,6 +37,9 @@ func Format(path string) (string, error) {
 // Encoder owns its temporary output and subprocess. Call Abort on every path;
 // Finish atomically publishes the completed file and makes Abort a no-op.
 type Options struct {
+	// Seed lists colors a GIF must reproduce exactly (theme background and
+	// foreground first). Other formats ignore it.
+	Seed []color.RGBA
 	Framerate  float64
 	LoopOffset string
 }
@@ -97,7 +101,11 @@ func NewWithOptions(path string, width, height int, opts Options) (*Encoder, err
 		return e, nil
 	}
 	if format == "gif" {
-		e.gif = &gifencode.Encoder{}
+		seed := make(color.Palette, len(opts.Seed))
+		for i, c := range opts.Seed {
+			seed[i] = c
+		}
+		e.gif = &gifencode.Encoder{Seed: seed}
 		return e, nil
 	}
 	ffmpeg, err := exec.LookPath("ffmpeg")
