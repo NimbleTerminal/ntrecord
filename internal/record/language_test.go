@@ -6,6 +6,7 @@ import (
 	"image/png"
 	"os"
 	"path/filepath"
+	"slices"
 	"strings"
 	"testing"
 	"time"
@@ -120,5 +121,14 @@ func TestRequireUsesTapePATHBeforeSpawning(t *testing.T) {
 	}
 	if _, err = os.Stat(marker); !os.IsNotExist(err) {
 		t.Fatal("child ran before Require failed")
+	}
+}
+
+func TestEnvironmentAdvertisesVersion(t *testing.T) {
+	for version, want := range map[string]string{"v1.2.3": "TERM_PROGRAM_VERSION=1.2.3", "": "TERM_PROGRAM_VERSION=dev"} {
+		env := environment([]string{"TERM_PROGRAM_VERSION=stale"}, tape.Config{Version: version}.ProgramVersion())
+		if !slices.Contains(env, want) || slices.Contains(env, "TERM_PROGRAM_VERSION=stale") {
+			t.Errorf("version %q: %v", version, env)
+		}
 	}
 }

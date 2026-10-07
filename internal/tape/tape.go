@@ -32,12 +32,23 @@ type Config struct {
 	CursorBlink                                  bool
 	TypingSpeed, WaitTimeout                     time.Duration
 	WaitPattern                                  string
+	// Version is the sigmamax release advertised to recorded programs; it is
+	// set by the command line, not by tapes.
+	Version string
 }
 
 func DefaultConfig() Config {
 	return Config{Output: "recording.gif", Shell: "/bin/sh", FontSize: 18, Cols: 80, Rows: 24,
 		LineHeight: 1, FontFamily: "Go Mono", Framerate: 20, PlaybackSpeed: 1,
 		TypingSpeed: 25 * time.Millisecond, WaitTimeout: 15 * time.Second, WaitPattern: `[$>#]$`, WindowBarSize: 30}
+}
+
+// ProgramVersion is Version without a leading "v", or "dev" when unset.
+func (c Config) ProgramVersion() string {
+	if v := strings.TrimPrefix(c.Version, "v"); v != "" {
+		return v
+	}
+	return "dev"
 }
 
 func (c Config) Destinations() []string {

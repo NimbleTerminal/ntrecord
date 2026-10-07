@@ -73,7 +73,7 @@ func Run(parent context.Context, opts Options) error {
 		speed = 1
 	}
 	period := time.Duration(float64(time.Second) / rate)
-	env := environment(os.Environ())
+	env := environment(os.Environ(), opts.Config.ProgramVersion())
 	for key, value := range opts.Config.Env {
 		env = replaceEnv(env, key, value)
 	}
@@ -520,7 +520,7 @@ func play(ctx context.Context, actions []tape.Action, events chan<- event) error
 	return nil
 }
 
-func environment(base []string) []string {
+func environment(base []string, version string) []string {
 	var env []string
 	for _, s := range base {
 		key, _, _ := strings.Cut(s, "=")
@@ -530,7 +530,7 @@ func environment(base []string) []string {
 		}
 		env = append(env, s)
 	}
-	return append(env, "TERM=xterm-256color", "COLORTERM=truecolor", "TERM_PROGRAM=sigmamax", "TERM_PROGRAM_VERSION=0.1", "PS1=$ ", "PS2=> ")
+	return append(env, "TERM=xterm-256color", "COLORTERM=truecolor", "TERM_PROGRAM=sigmamax", "TERM_PROGRAM_VERSION="+version, "PS1=$ ", "PS2=> ")
 }
 
 func replaceEnv(env []string, key, value string) []string {

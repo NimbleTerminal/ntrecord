@@ -41,6 +41,7 @@ func run(args []string) error {
 	ctx, stop := signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGTERM)
 	defer stop()
 	opts := record.Options{Config: tape.DefaultConfig()}
+	opts.Config.Version = version
 	if args[0] == "record" {
 		fs := flag.NewFlagSet("record", flag.ContinueOnError)
 		fs.StringVar(&opts.Config.Output, "o", opts.Config.Output, "output (.gif, .mp4, .webm, .txt, .ascii, or frames/; video requires ffmpeg)")
@@ -71,6 +72,7 @@ func run(args []string) error {
 			return err
 		}
 		opts.Config, opts.Tape = t.Config, t
+		opts.Config.Version = version
 	}
 	err := record.Run(ctx, opts)
 	if err != nil {

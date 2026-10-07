@@ -121,7 +121,7 @@ func New(c tape.Config) (_ *Renderer, err error) {
 		}),
 		vt.WithSizeReport(func(_ *vt.Terminal) (vt.SizeReportSize, bool) {
 			return vt.SizeReportSize{Columns: uint16(r.Cols), Rows: uint16(r.Rows), CellWidth: uint32(r.CellWidth), CellHeight: uint32(r.CellHeight)}, true
-		}), vt.WithXtversion(func(_ *vt.Terminal) string { return "sigmamax 0.1" }))
+		}), vt.WithXtversion(func(_ *vt.Terminal) string { return "sigmamax " + c.ProgramVersion() }))
 	if err != nil {
 		return nil, err
 	}
