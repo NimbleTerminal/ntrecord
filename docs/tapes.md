@@ -109,5 +109,32 @@ They provide readable golden files, with sigmamax's own checkpoint formatting.
 
 Try `task demo:language` for a sourced, themed tape with clipboard input, keyboard
 editing, waits, multiple outputs, and a PNG screenshot. `task demo:kitty` exercises
-direct PNG APCs; it allows four seconds for `go run`, which may need increasing
-on a slow machine. Tape completion closes the PTY and stops its shell.
+direct PNG APCs, waiting for `go run` to finish with `Wait+Screen`. Tape completion
+closes the PTY and stops its shell.
+
+## Deterministic mode
+
+By default a recording samples the screen on the wall clock (`realtime`), so it
+captures whatever a program does, animations included, but two runs of one tape
+differ, and slow encoding can stretch the recording past the script. Pass `-mode
+deterministic` to run a virtual clock instead:
+
+```sh
+sigmamax -mode deterministic demo.tape
+```
+
+After every step the program is given time to settle (30 ms of silence, 1 s at
+most; the first step also waits for any output, so a slow shell is not recorded
+before its prompt). Then the screen is held for exactly the time the tape names:
+the typing interval after each key, the duration of a `Sleep`, divided by
+`PlaybackSpeed`. `Sleep 5s` costs no real time, hidden time is omitted as usual, a
+blinking cursor still blinks, and the same tape gives byte-identical output, so a
+recording can be a golden file.
+
+The trade is that a virtual clock does not wait for the program. A step that takes
+real time, such as a build, must end with `Wait+Screen /text/`; a `Sleep` will not
+wait for it. If the screen is still changing when the tape ends, sigmamax says so
+on stderr. Programs that animate on their own (spinners, shaders) need `realtime`,
+and so does a live `record` session, which follows a person's clock. Typing is
+bound by the settle window and by encoding each distinct frame, so a tape that
+mostly types is not much faster than real time; one that sleeps or waits is.

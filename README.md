@@ -98,7 +98,9 @@ Screenshot demo.png
 ```
 
 Check a tape without recording it with `sigmamax validate demo.tape`, and check
-the machine with `sigmamax doctor`. See [docs/tapes.md](docs/tapes.md) for every command and setting, `Wait` semantics,
+the machine with `sigmamax doctor`. `sigmamax -mode deterministic demo.tape` runs a
+virtual clock: the same tape gives byte-identical output and `Sleep` costs no real
+time ([details](docs/tapes.md#deterministic-mode)). See [docs/tapes.md](docs/tapes.md) for every command and setting, `Wait` semantics,
 quoting rules, and output behavior.
 
 ## Live recording

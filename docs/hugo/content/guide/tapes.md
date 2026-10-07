@@ -85,6 +85,16 @@ Enter
 
 Hide only pauses the recording. It does not wait for a running command, so put a `Wait` before `Hide` or `Show` when you need the command finished first.
 
+## Reproducible recordings
+
+Normally sigmamax records in real time, so two runs of a tape are close but not identical, and a slow encode can make the recording a little longer than the script. For a demo you regenerate and compare, or one that is a test, ask for a virtual clock:
+
+```sh
+sigmamax -mode deterministic demo.tape
+```
+
+Each step is held for exactly the time the tape says, once the program has settled, so the same tape gives the same file every time, and a `Sleep 5s` takes no real time. The one rule: a virtual clock does not wait for your program, so end any slow step with `Wait+Screen /text/` instead of guessing with `Sleep`. If a program is still drawing when the tape ends, sigmamax tells you. Programs that animate by themselves need the default real-time mode.
+
 ## More
 
 ```text

@@ -6,6 +6,6 @@ Set Rows 16
 Hide
 Type "go run ./examples/kitty"
 Enter
-Sleep 4s
+Wait+Screen@30s /PNG rendered/
 Show
 Sleep 2s

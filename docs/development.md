@@ -157,6 +157,11 @@ therefore flattens curves itself with `float32(a*b)` conversions, and
 product feeds a sum in the render path. To find a fusion site that matters, bisect
 it: `bisect -compile=fma task test:golden` (`golang.org/x/tools/cmd/bisect`).
 
+Deterministic recording (`-mode deterministic`) has its own tests in
+`internal/record/deterministic_test.go`: three runs of one tape must produce the same
+GIF bytes while 5 s of `Sleep` costs almost no real time. If one ever flakes, the
+settle window in `record.go` (`settleQuiet`) is the first suspect.
+
 ## Package boundaries
 
 `internal/boundaries` is a test that fails when a package imports more than its
