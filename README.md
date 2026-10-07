@@ -142,6 +142,11 @@ emulation and Kitty graphics support. The bundled theme catalog and compatibilit
 fixtures come from VHS commit `24fa2254a9806091e6ee6a980e9f3bcfe0a9ba53`; see
 [theme license](internal/theme/LICENSE) and [fixture license](internal/tape/testdata/vhs/LICENSE).
 
+[foley](https://github.com/GH-Jaider/foley) takes the same approach and came first.
+We borrowed these ideas from it, without its code: the deterministic clock, the
+`xterm-ghostty` terminal identity, golden frames checked on every platform, upstream
+VHS tapes as conformance tests, and the `validate` and `doctor` commands.
+
 ## License
 
 [MIT](LICENSE). Bundled fonts are covered by [FONT-LICENSE](FONT-LICENSE).
