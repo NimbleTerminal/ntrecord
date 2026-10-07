@@ -6,6 +6,7 @@ import (
 	"path/filepath"
 	"strings"
 	"testing"
+	"time"
 )
 
 // runCLI runs the command line and returns what it printed and its error.
@@ -81,5 +82,46 @@ func TestDoctorCommand(t *testing.T) {
 	}
 	if !strings.Contains(out, "engine") || !strings.Contains(out, "libghostty-vt") {
 		t.Errorf("doctor output:\n%s", out)
+	}
+}
+
+func TestModeFlagSelectsTheClock(t *testing.T) {
+	dir := t.TempDir()
+	path := writeTape(t, "demo.tape", "Output "+filepath.Join(dir, "demo.gif")+"\nSet Shell /bin/sh\nSet Cols 30\nSet Rows 5\nType \"hi\"\nEnter\nSleep 4s\n")
+	start := time.Now()
+	_, stderr, err := runCLI(t, "-mode", "deterministic", path)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if took := time.Since(start); took > 3*time.Second {
+		t.Errorf("a deterministic 4s sleep took %v in real time", took)
+	}
+	if !strings.Contains(stderr, "Wrote") {
+		t.Errorf("no confirmation: %q", stderr)
+	}
+	if _, err := os.Stat(filepath.Join(dir, "demo.gif")); err != nil {
+		t.Error(err)
+	}
+	// The = form works too, and realtime is still the default.
+	if _, _, err := runCLI(t, "--mode=realtime", writeTape(t, "r.tape", "Output "+filepath.Join(dir, "r.gif")+"\nSet Shell /bin/sh\nType \"x\"\nSleep 100ms\n")); err != nil {
+		t.Fatal(err)
+	}
+}
+
+func TestModeFlagRejectsUnknownModesAndLiveRecording(t *testing.T) {
+	path := writeTape(t, "demo.tape", "Output x.gif\nType \"x\"\n")
+	if _, _, err := runCLI(t, "-mode", "warp", path); err == nil || !strings.Contains(err.Error(), "warp") {
+		t.Fatalf("unknown mode: %v", err)
+	}
+	// record is driven by a person: it has no -mode.
+	if _, _, err := runCLI(t, "record", "-mode", "deterministic", "-o", filepath.Join(t.TempDir(), "x.gif")); err == nil {
+		t.Fatal("record accepted -mode")
+	}
+}
+
+func TestUsageMentionsMode(t *testing.T) {
+	out, _, _ := runCLI(t)
+	if !strings.Contains(out, "-mode") || !strings.Contains(out, "deterministic") {
+		t.Errorf("usage does not explain -mode:\n%s", out)
 	}
 }

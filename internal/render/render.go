@@ -316,8 +316,17 @@ type cell struct {
 // Frame returns a cached, immutable bitmap. Callers must not modify it.
 func (r *Renderer) Frame() (*image.RGBA, error) { return r.FrameAt(time.Now()) }
 
+// BlinkHalfPeriod is how long a blinking cursor stays on, and then off.
+const BlinkHalfPeriod = 500 * time.Millisecond
+
+// FrameAfter is the frame offset into the recording: the cursor blinks by
+// recorded time, not the wall clock.
+func (r *Renderer) FrameAfter(offset time.Duration) (*image.RGBA, error) {
+	return r.FrameAt(r.blinkStart.Add(offset))
+}
+
 func (r *Renderer) FrameAt(now time.Time) (*image.RGBA, error) {
-	blinkOn := now.Sub(r.blinkStart)/(500*time.Millisecond)%2 == 0
+	blinkOn := now.Sub(r.blinkStart)/BlinkHalfPeriod%2 == 0
 	if r.frame != nil && (!r.frameBlinks || r.frameBlinkOn == blinkOn) {
 		return r.frame, nil
 	}

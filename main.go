@@ -33,11 +33,16 @@ func main() {
 	}
 }
 
-const usage = `Usage: sigmamax <file.tape>
+const usage = `Usage: sigmamax [-mode realtime|deterministic] <file.tape>
        sigmamax record [-o output] [-shell executable] [-cols n] [-rows n] [-font-size pixels] [-- command args...]
        sigmamax validate <file.tape>...
        sigmamax doctor
        sigmamax --version
+
+-mode picks the clock for a tape. realtime (the default) samples the screen as time
+passes and captures animations. deterministic runs a virtual clock: each step is
+held as long as the tape says, once the program settles, so the same tape gives
+the same recording and Sleep costs no real time. Use Wait for anything slow.
 
 validate checks tapes (syntax, fonts, themes, Require, outputs) without recording.
 doctor checks that this machine can record.`
@@ -62,7 +67,7 @@ func run(args []string, stdout, stderr io.Writer) error {
 	}
 	ctx, stop := signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGTERM)
 	defer stop()
-	opts := record.Options{Config: tape.DefaultConfig()}
+	opts := record.Options{Config: tape.DefaultConfig(), Warn: stderr}
 	opts.Config.Version = version
 	if args[0] == "record" {
 		fs := flag.NewFlagSet("record", flag.ContinueOnError)
@@ -86,15 +91,29 @@ func run(args []string, stdout, stderr io.Writer) error {
 			defer term.Restore(int(os.Stdin.Fd()), state)
 		}
 	} else {
-		if len(args) != 1 {
+		fs := flag.NewFlagSet("sigmamax", flag.ContinueOnError)
+		fs.SetOutput(stderr)
+		modeFlag := fs.String("mode", string(tape.Realtime), "clock: realtime or deterministic")
+		if err := fs.Parse(args); err != nil {
+			if errors.Is(err, flag.ErrHelp) {
+				return nil
+			}
+			return err
+		}
+		if fs.NArg() != 1 {
 			return fmt.Errorf("expected one tape path")
 		}
-		t, err := tape.ParseFile(args[0])
+		mode, err := tape.ParseMode(*modeFlag)
+		if err != nil {
+			return err
+		}
+		t, err := tape.ParseFile(fs.Arg(0))
 		if err != nil {
 			return err
 		}
 		opts.Config, opts.Tape = t.Config, t
 		opts.Config.Version = version
+		opts.Config.Mode = mode
 	}
 	err := record.Run(ctx, opts)
 	if err != nil {

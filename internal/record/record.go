@@ -2,9 +2,11 @@
 package record
 
 import (
+	"bytes"
 	"context"
 	"errors"
 	"fmt"
+	"image"
 	"image/png"
 	"io"
 	"os"
@@ -30,6 +32,10 @@ type Options struct {
 	// Live input/output are forwarded unchanged to/from the PTY.
 	Input  io.Reader
 	Output io.Writer
+	// Warn receives advice about a recording that may not have captured what the
+	// author meant, such as a deterministic tape that ended before its program
+	// stopped drawing. Nil discards it.
+	Warn io.Writer
 }
 
 type output struct {
@@ -59,7 +65,20 @@ type writeResult struct {
 	err     error
 }
 
+// A deterministic recording waits for the program to settle after each step:
+// quiet for settleQuiet, or settleLimit at most (a program that never stops
+// drawing must use realtime mode). The first step also waits for any output,
+// so a slow-starting shell is not recorded before its prompt.
+const (
+	settleQuiet = 30 * time.Millisecond
+	settleLimit = time.Second
+)
+
 func Run(parent context.Context, opts Options) error {
+	virtual := opts.Config.Mode == tape.Deterministic
+	if virtual && opts.Tape == nil {
+		return errors.New("deterministic mode needs a tape: a live recording follows a person's clock")
+	}
 	r, err := render.New(opts.Config)
 	if err != nil {
 		return err
@@ -170,7 +189,7 @@ func Run(parent context.Context, opts Options) error {
 	liveInput := make(chan []byte)
 	if opts.Tape != nil {
 		go func() {
-			err := play(ctx, opts.Tape.Actions, events)
+			err := play(ctx, opts.Tape.Actions, events, virtual)
 			select {
 			case events <- event{scriptDone: true, output: output{err: err}}:
 			case <-ctx.Done():
@@ -223,8 +242,59 @@ func Run(parent context.Context, opts Options) error {
 		}
 		return encoder.Add(captureCtx, frame, d)
 	}
+	// Deterministic mode: frames are made when the tape asks for time to pass,
+	// after the program settles, and held for exactly that long. recorded is the
+	// virtual time already in the recording; it also drives the cursor's blink.
+	var recorded time.Duration
+	var lastEmitted *image.RGBA // the last frame held, to notice a program drawing after the tape ends
+	emit := func(captureCtx context.Context, d time.Duration) error {
+		for d > 0 && visible {
+			step := d
+			if opts.Config.CursorBlink {
+				step = min(d, render.BlinkHalfPeriod-recorded%render.BlinkHalfPeriod)
+			}
+			frame, err := r.FrameAfter(recorded)
+			if err != nil {
+				return err
+			}
+			if err = encoder.Add(captureCtx, frame, step); err != nil {
+				return err
+			}
+			lastEmitted = frame
+			recorded += step
+			d -= step
+		}
+		return nil
+	}
+	var settle *control // a step waiting for the program to go quiet
+	var settleThen func() error
+	var settleQuietT, settleLimitT *time.Timer
+	var settleQuietC, settleLimitC <-chan time.Time
+	gotOutput := false
+	defer func() {
+		if settle != nil {
+			settleQuietT.Stop()
+			settleLimitT.Stop()
+		}
+	}()
+	startSettle := func(c control, then func() error) {
+		settle, settleThen = &c, then
+		settleQuietT, settleLimitT = time.NewTimer(settleQuiet), time.NewTimer(settleLimit)
+		settleQuietC, settleLimitC = settleQuietT.C, settleLimitT.C
+	}
+	finishSettle := func() {
+		err := settleThen()
+		settleQuietT.Stop()
+		settleLimitT.Stop()
+		settle.ack <- err
+		settle, settleQuietC, settleLimitC = nil, nil, nil
+	}
 	ticker := time.NewTicker(period)
 	defer ticker.Stop()
+	tick := ticker.C
+	if virtual {
+		tick = nil // no sampling: the tape's own steps make the frames
+	}
 	finished := false
 	var runErr error
 	var pending *control
@@ -326,8 +396,12 @@ func Run(parent context.Context, opts Options) error {
 			if ev.control == nil {
 				o := ev.output
 				if len(o.data) > 0 {
+					gotOutput = true
 					if quiet != nil {
 						quiet.Reset(100 * time.Millisecond)
+					}
+					if settle != nil {
+						settleQuietT.Reset(settleQuiet)
 					}
 					err := r.Write(o.data)
 					if reply := r.TakeReplies(); len(reply) > 0 {
@@ -363,6 +437,37 @@ func Run(parent context.Context, opts Options) error {
 			}
 			c := *ev.control
 			a := c.action
+			if virtual {
+				handled := true
+				switch a.Command {
+				case "Hold":
+					startSettle(c, func() error { return emit(ctx, time.Duration(float64(a.Duration)/speed)) })
+				case "Hide":
+					startSettle(c, func() error { visible = false; return nil })
+				case "Show":
+					startSettle(c, func() error { visible = true; return nil })
+				case "Checkpoint":
+					startSettle(c, func() error {
+						if visible {
+							return encoder.Text(r)
+						}
+						return nil
+					})
+				case "Screenshot":
+					startSettle(c, func() error {
+						frame, err := r.FrameAfter(recorded)
+						if err != nil {
+							return err
+						}
+						return writeAtomic(a.Text, func(w io.Writer) error { return png.Encode(w, frame) })
+					})
+				default:
+					handled = false
+				}
+				if handled {
+					continue
+				}
+			}
 			var actionErr error
 			var input []byte
 			switch a.Command {
@@ -420,6 +525,16 @@ func Run(parent context.Context, opts Options) error {
 			pending = nil
 			waitDeadline = nil
 
+		case <-settleQuietC:
+			// Output already queued, or none yet from a program that has not
+			// started, means the step is not settled.
+			if len(events) > 0 || !gotOutput {
+				settleQuietT.Reset(settleQuiet)
+			} else {
+				finishSettle()
+			}
+		case <-settleLimitC:
+			finishSettle()
 		case <-quietC:
 			// Prefer bytes already queued when the quiet timer fired.
 			if len(events) == 0 {
@@ -429,7 +544,7 @@ func Run(parent context.Context, opts Options) error {
 			}
 		case <-tailC:
 			finished = true
-		case <-ticker.C:
+		case <-tick:
 			if err := capture(ctx, time.Now(), false); err != nil {
 				runErr, finished = err, true
 			}
@@ -440,27 +555,26 @@ func Run(parent context.Context, opts Options) error {
 	}
 	// Every runtime exit attempts every output's finalization. A failed video
 	// stream must not discard healthy GIF/text outputs or their diagnostics.
-	runErr = errors.Join(runErr, capture(context.Background(), time.Now().Add(period), true))
+	// The screen now should be the last frame held. If it is not, the program drew
+	// after the tape's final step (a virtual Sleep does not wait for it).
+	if virtual && visible && runErr == nil && opts.Warn != nil && !opts.Config.CursorBlink && lastEmitted != nil {
+		if f, err := r.FrameAfter(recorded); err == nil && !bytes.Equal(f.Pix, lastEmitted.Pix) {
+			fmt.Fprintln(opts.Warn, "sigmamax: warning: the program was still producing output when the tape ended, and a deterministic recording does not wait for it: Sleep is virtual time. End slow steps with Wait+Screen /text/.")
+		}
+	}
+	if virtual {
+		// Hold the last viewport for a beat, as realtime does.
+		runErr = errors.Join(runErr, emit(context.Background(), max(period, 10*time.Millisecond)))
+	} else {
+		runErr = errors.Join(runErr, capture(context.Background(), time.Now().Add(period), true))
+	}
 	if visible {
 		runErr = errors.Join(runErr, encoder.Text(r))
 	}
 	return errors.Join(runErr, encoder.Finish())
 }
 
-func play(ctx context.Context, actions []tape.Action, events chan<- event) error {
-	wait := func(d time.Duration) error {
-		if d == 0 {
-			return ctx.Err()
-		}
-		timer := time.NewTimer(d)
-		defer timer.Stop()
-		select {
-		case <-timer.C:
-			return nil
-		case <-ctx.Done():
-			return ctx.Err()
-		}
-	}
+func play(ctx context.Context, actions []tape.Action, events chan<- event, virtual bool) error {
 	control := func(a tape.Action) error {
 		c := control{action: a, ack: make(chan error, 1)}
 		select {
@@ -471,6 +585,24 @@ func play(ctx context.Context, actions []tape.Action, events chan<- event) error
 		select {
 		case err := <-c.ack:
 			return err
+		case <-ctx.Done():
+			return ctx.Err()
+		}
+	}
+	// Time passes by sleeping for real, or, in a deterministic recording, by
+	// asking the recorder to hold the settled screen for that long.
+	wait := func(d time.Duration) error {
+		if d == 0 {
+			return ctx.Err()
+		}
+		if virtual {
+			return control(tape.Action{Command: "Hold", Duration: d})
+		}
+		timer := time.NewTimer(d)
+		defer timer.Stop()
+		select {
+		case <-timer.C:
+			return nil
 		case <-ctx.Done():
 			return ctx.Err()
 		}

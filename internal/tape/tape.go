@@ -16,6 +16,30 @@ import (
 	"github.com/NimbleMarkets/sigmamax/internal/encode"
 )
 
+// Mode selects the clock a recording runs on.
+type Mode string
+
+const (
+	// Realtime samples the screen on the wall clock. It captures whatever a
+	// program does, animations included, but two runs differ.
+	Realtime Mode = "realtime"
+	// Deterministic runs a virtual clock: each step of a tape is held for the
+	// time the tape says, after the program has settled, so the same tape gives
+	// the same recording and sleeping costs no real time.
+	Deterministic Mode = "deterministic"
+)
+
+// ParseMode accepts "realtime", "deterministic", or "" (realtime).
+func ParseMode(s string) (Mode, error) {
+	switch Mode(s) {
+	case "", Realtime:
+		return Realtime, nil
+	case Deterministic:
+		return Deterministic, nil
+	}
+	return "", fmt.Errorf("unknown mode %q: use realtime or deterministic", s)
+}
+
 type Config struct {
 	Output, Shell                                string
 	Outputs                                      []string
@@ -32,6 +56,8 @@ type Config struct {
 	CursorBlink                                  bool
 	TypingSpeed, WaitTimeout                     time.Duration
 	WaitPattern                                  string
+	// Mode is the recording clock; the command line sets it, not tapes.
+	Mode Mode
 	// Version is the sigmamax release advertised to recorded programs; it is
 	// set by the command line, not by tapes.
 	Version string
@@ -40,7 +66,7 @@ type Config struct {
 func DefaultConfig() Config {
 	return Config{Output: "recording.gif", Shell: "/bin/sh", FontSize: 18, Cols: 80, Rows: 24,
 		LineHeight: 1, FontFamily: "Go Mono", Framerate: 20, PlaybackSpeed: 1,
-		TypingSpeed: 25 * time.Millisecond, WaitTimeout: 15 * time.Second, WaitPattern: `[$>#]$`, WindowBarSize: 30}
+		TypingSpeed: 25 * time.Millisecond, WaitTimeout: 15 * time.Second, WaitPattern: `[$>#]$`, WindowBarSize: 30, Mode: Realtime}
 }
 
 // ProgramVersion is Version without a leading "v", or "dev" when unset.
