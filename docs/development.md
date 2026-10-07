@@ -130,6 +130,17 @@ and the all-commands fixture. End-to-end tests exercise real PTY input, waits,
 clipboard paste, screenshots, text checkpoints, and multiple outputs. Upstream
 fixtures and theme data retain Charm's MIT license and theme author metadata.
 
+## Package boundaries
+
+`internal/boundaries` is a test that fails when a package imports more than its
+rule allows (`rules` in `boundaries_test.go`). It keeps three seams narrow:
+libghostty, and so cgo, is reached only through `internal/render`; `os/exec` is
+used only by the packages that own an external program (`encode` for FFmpeg,
+`record` for the recorded program, `doctor`); and the leaf packages (`theme`,
+`gifencode`, `terminfo`) import nothing of ours. A new package needs a rule,
+which is the moment to decide what it may depend on. Tools and examples are
+exempt.
+
 ## User guide site
 
 The user guide is a [Hugo](https://gohugo.io) site in `docs/hugo`, using the
