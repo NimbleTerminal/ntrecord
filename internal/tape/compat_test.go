@@ -97,6 +97,34 @@ func TestRejectInvalidVHS(t *testing.T) {
 		t.Run(input, func(t *testing.T) {
 			if _, err := Parse(strings.NewReader(input)); err == nil {
 				t.Fatal("accepted invalid tape")
+
+// VHS tokenizes "Type@.2'text'" as Type, @, .2, 'text': a quoted string needs
+// no space after the timing that precedes it (the jqp example relies on this).
+func TestQuoteMayFollowTimingDirectly(t *testing.T) {
+	for _, tc := range []struct {
+		input    string
+		text     string
+		interval time.Duration
+	}{
+		{`Type@.2'[ .products[] ]'`, `[ .products[] ]`, 200 * time.Millisecond},
+		{`Type@50ms"hi there"`, `hi there`, 50 * time.Millisecond},
+		{"Type@1s`back`", `back`, time.Second},
+		{`Type@.2 'spaced'`, `spaced`, 200 * time.Millisecond},
+	} {
+		p, err := Parse(strings.NewReader(tc.input + "\nEnter"))
+		if err != nil {
+			t.Errorf("%s: %v", tc.input, err)
+			continue
+		}
+		if a := p.Actions[0]; a.Command != "Type" || a.Text != tc.text || a.Interval != tc.interval {
+			t.Errorf("%s: %+v", tc.input, a)
+		}
+	}
+	// A quote inside an ordinary word is not a timing boundary.
+	if _, err := Parse(strings.NewReader(`Wait+Screen /a'b/`)); err != nil {
+		t.Errorf("regex with a quote: %v", err)
+	}
+}
 			}
 		})
 	}

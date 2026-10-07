@@ -3,6 +3,7 @@ package tape
 import (
 	"encoding/json"
 	"fmt"
+	"regexp"
 	"strings"
 )
 
@@ -19,6 +20,14 @@ type stream struct {
 func (s *stream) end() bool   { return s.pos >= len(s.tokens) }
 func (s *stream) peek() token { return s.tokens[s.pos] }
 func (s *stream) pop() token  { t := s.peek(); s.pos++; return t }
+
+var timingSuffix = regexp.MustCompile(`^[0-9.]+(ms|s|m|h)?$`)
+
+// endsInTiming reports whether word reads cmd@<number>[unit], such as Type@.2.
+func endsInTiming(word string) bool {
+	at := strings.LastIndex(word, "@")
+	return at > 0 && timingSuffix.MatchString(word[at+1:])
+}
 
 // lex keeps quoted text literal, as VHS does: shell escapes belong to the
 // shell. Regex and JSON literals have their own delimiters and may contain #.
@@ -136,6 +145,10 @@ func lex(input string) ([]token, error) {
 			regexNext = false
 		default:
 			for i < len(input) && !strings.ContainsRune(" \t\r\n#", rune(input[i])) {
+				// VHS ends the timing of Type@.2 at the quote that follows it.
+				if (input[i] == '\'' || input[i] == '"' || input[i] == '`') && endsInTiming(input[start:i]) {
+					break
+				}
 				i++
 			}
 			t.text = input[start:i]
