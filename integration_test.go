@@ -3,9 +3,14 @@ package main
 import (
 	"bytes"
 	"context"
+	"encoding/base64"
 	"errors"
 	"fmt"
+	"image"
+	"image/color"
+	"image/draw"
 	"image/gif"
+	"image/png"
 	"os"
 	"os/exec"
 	"path/filepath"
@@ -234,4 +239,149 @@ func TestBrokenStdoutStillSavesGIF(t *testing.T) {
 		t.Fatalf("expected EPIPE, got %v: %s", err, stderr.String())
 	}
 	readGIF(t, path)
+}
+
+// Reproduce ntcharts' same-ID virtual PNG updates without its GPU dependency.
+// Pauses force capture ticks between APC chunks and inside a partial APC.
+func TestChunkedKittyAnimationHelper(t *testing.T) {
+	if os.Getenv("SIGMAMAX_CHUNKED_HELPER") != "1" {
+		return
+	}
+	fmt.Print("\x1b[?25l")
+	colors := []color.RGBA{{255, 0, 0, 255}, {0, 255, 0, 255}, {0, 0, 255, 255}}
+	for i := 0; i < 6; i++ {
+		im := image.NewRGBA(image.Rect(0, 0, 22, 21))
+		draw.Draw(im, im.Bounds(), image.NewUniform(colors[i%3]), image.Point{}, draw.Src)
+		var b bytes.Buffer
+		if err := png.Encode(&b, im); err != nil {
+			panic(err)
+		}
+		data := base64.StdEncoding.EncodeToString(b.Bytes())
+		split := len(data) / 8 * 4
+		fmt.Printf("\x1b_Gf=100,q=2,i=43,U=1,c=2,r=1,a=T,m=1;%s\x1b\\", data[:split])
+		if i > 0 {
+			time.Sleep(60 * time.Millisecond)
+		}
+		final := "\x1b_Gq=2,m=0;" + data[split:] + "\x1b\\"
+		fmt.Print(final[:len(final)/2])
+		if i > 0 {
+			time.Sleep(60 * time.Millisecond)
+		}
+		fmt.Print(final[len(final)/2:])
+		if i == 0 {
+			fmt.Print("\x1b[H\x1b[38;2;0;0;43m\U0010eeee\u0305\u0305\U0010eeee\u0305\u030d\x1b[0m")
+		}
+		time.Sleep(120 * time.Millisecond)
+	}
+	// A genuine clear is part of the recording and must not be filtered out.
+	fmt.Print("\x1b[2J\x1b[H")
+	time.Sleep(120 * time.Millisecond)
+	os.Exit(0)
+}
+
+func TestChunkedKittyAnimationContinuity(t *testing.T) {
+	for _, format := range []string{"gif", "mp4", "webm"} {
+		t.Run(format, func(t *testing.T) {
+			if format != "gif" {
+				testvideo.Require(t)
+			}
+			c := tape.DefaultConfig()
+			c.Cols, c.Rows = 20, 3
+			c.Output = filepath.Join(t.TempDir(), "animation."+format)
+			c.Env = map[string]string{"SIGMAMAX_CHUNKED_HELPER": "1"}
+			ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+			defer cancel()
+			if err := record.Run(ctx, record.Options{Config: c, Command: []string{os.Args[0], "-test.run=^TestChunkedKittyAnimationHelper$"}}); err != nil {
+				t.Fatal(err)
+			}
+			var samples []color.RGBA
+			if format == "gif" {
+				for _, f := range readGIF(t, c.Output).Image {
+					samples = append(samples, color.RGBAModel.Convert(f.At(5, 5)).(color.RGBA))
+				}
+			} else {
+				// Crop one interior pixel per decoded frame; codec chroma differences
+				// are tolerated by classifying its dominant channel.
+				data := testvideo.Decode(t, c.Output, "-vf", "crop=2:2:4:4")
+				for i := 0; i+11 < len(data); i += 12 {
+					samples = append(samples, color.RGBA{data[i], data[i+1], data[i+2], 255})
+				}
+			}
+			var transitions []string
+			started := false
+			for _, p := range samples {
+				state := "blank"
+				switch {
+				case p.R > 150 && p.G < 100 && p.B < 100:
+					state = "red"
+				case p.G > 150 && p.R < 100 && p.B < 100:
+					state = "green"
+				case p.B > 150 && p.R < 100 && p.G < 100:
+					state = "blue"
+				}
+				if state != "blank" {
+					started = true
+				}
+				if started && (len(transitions) == 0 || transitions[len(transitions)-1] != state) {
+					transitions = append(transitions, state)
+				}
+			}
+			want := "red green blue red green blue blank"
+			if got := strings.Join(transitions, " "); got != want {
+				t.Fatalf("animation lost a frame or captured an upload gap: %s; want %s", got, want)
+			}
+		})
+	}
+}
+
+// This opt-in check captures the actual GPU application. CI always runs the
+// deterministic chunked-PNG regression above; it does not need a GPU/ntcharts.
+func TestNTChartsShaderContinuity(t *testing.T) {
+	bin := os.Getenv("SIGMAMAX_SHADER_BIN")
+	if bin == "" {
+		t.Skip("set SIGMAMAX_SHADER_BIN or run task test:shaders")
+	}
+	path := os.Getenv("SIGMAMAX_SHADER_OUTPUT")
+	if path == "" {
+		path = filepath.Join(t.TempDir(), "shaders.gif")
+	}
+	c := tape.DefaultConfig()
+	c.Output = path
+	c.Env = map[string]string{"NTCHARTS_KITTY": "supported", "NTCHARTS_TMUX_PASSTHROUGH": "false"}
+	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
+	defer cancel()
+	var output bytes.Buffer
+	err := record.Run(ctx, record.Options{Config: c, Command: []string{"env", "-u", "NO_COLOR", bin, "-medium=direct", "-fullscreen", "-fps=20", "-duration=8s", "-preset=plasma"}, Output: &output})
+	if err != nil {
+		t.Fatalf("shader: %v (first output bytes: %q)", err, output.Bytes()[:min(output.Len(), 500)])
+	}
+	g := readGIF(t, path)
+	first, last := -1, -1
+	blanks := make([]bool, len(g.Image))
+	for i, f := range g.Image {
+		counts := make([]int, len(f.Palette))
+		peak := 0
+		for _, index := range f.Pix {
+			counts[index]++
+			peak = max(peak, counts[index])
+		}
+		blanks[i] = float64(peak)/float64(len(f.Pix)) > 0.99
+		if !blanks[i] {
+			if first < 0 {
+				first = i
+			}
+			last = i
+		}
+	}
+	if first < 0 || last == first {
+		t.Fatal("shader produced no moving image")
+	}
+	elapsed := 0
+	for i, d := range g.Delay {
+		if i > first && i < last && blanks[i] {
+			t.Errorf("blank frame %d at %.2fs, held %.2fs", i, float64(elapsed)/100, float64(d)/100)
+		}
+		elapsed += d
+	}
+	t.Logf("inspected %d frames over %.2fs; active image frames %d..%d; saved %s", len(g.Image), float64(elapsed)/100, first, last, path)
 }

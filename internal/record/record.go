@@ -200,7 +200,7 @@ func Run(parent context.Context, opts Options) error {
 		if !final && r.RenderHeld(now) {
 			return nil
 		}
-		frame, err := r.Frame()
+		frame, err := r.CaptureFrameAt(now)
 		if err != nil {
 			return err
 		}

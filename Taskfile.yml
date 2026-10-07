@@ -80,6 +80,15 @@ tasks:
     env:
       SIGMAMAX_REQUIRE_FFMPEG: '1'
     cmds: ['go test -mod=readonly {{.CLI_ARGS}} . ./internal/encode']
+  test:shaders:
+    desc: Record ntcharts shaders and check every GIF frame (requires GPU and SHADERS_BIN)
+    requires:
+      vars: [SHADERS_BIN]
+    deps: [native-check]
+    env:
+      SIGMAMAX_SHADER_BIN: '{{.SHADERS_BIN}}'
+      SIGMAMAX_SHADER_OUTPUT: '{{.OUTPUT | default "examples/shaders.gif"}}'
+    cmds: [go test -mod=readonly -count=1 -run '^TestNTChartsShaderContinuity$' -v .]
   test-race:
     desc: Run tests with race detection
     deps: [native-check]

@@ -306,6 +306,28 @@ video with the same invocation.
 Repeated PNG transmissions animate normally; the deferred feature is Kitty's
 separate animation-frame protocol. `task demo:placeholder` exercises the same
 Unicode placement scheme without needing ntcharts or a GPU.
+For a repeatable eight-second shader recording with a check for blank frames
+between image frames, point this task at your compiled ntcharts shader example:
+
+```sh
+task test:shaders SHADERS_BIN=/path/to/ntcharts/bin/ntcharts-shaders
+# Optional: OUTPUT=/tmp/shaders.gif (default: examples/shaders.gif)
+```
+
+This opt-in test needs a hardware GPU. The normal test suite uses a small PNG
+client that deliberately pauses between upload chunks and checks GIF, MP4, and
+WebM frame continuity without a GPU. Shader startup and shutdown may legitimately
+show the terminal background; the shader check only rejects interior blank frames.
+
+The pinned libghostty removes an existing image when a chunked replacement
+starts, before the replacement is complete. During recording, if displayed
+Unicode placeholders lose their image, sigmamax holds the last presented bitmap
+for up to 250ms while waiting for a replacement. Clearing the placeholder cells
+ends this hold immediately. The binding does not expose uploads in progress, so
+an explicit image deletion that leaves its placeholder cells on screen has the
+same bounded delay. Abandoned uploads cannot hold capture indefinitely; immediate
+screenshots still reflect the terminal's current state.
+
 `NO_COLOR` must be unset for this scheme: the cell's foreground color carries
 the image ID. Synchronized output (mode 2026) holds incomplete grid updates
 out of the recording, with a one-second timeout if the application never finishes.

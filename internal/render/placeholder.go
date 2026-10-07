@@ -77,10 +77,13 @@ func (p *placeholderCell) inherit(previous *placeholderCell) {
 func (r *Renderer) resolvePlaceholders(cells []cell) []placement {
 	type key struct{ image, placement uint32 }
 	targets := make(map[key]placement)
+	r.frameImages = make(map[uint32]struct{})
+	r.frameMissingImages = make(map[uint32]struct{})
 	var out []placement
 	for _, p := range r.placements {
 		if !p.meta.IsVirtual {
 			out = append(out, p)
+			r.frameImages[p.meta.ImageID] = struct{}{}
 			continue
 		}
 		targets[key{p.meta.ImageID, p.meta.PlacementID}] = p
@@ -103,8 +106,10 @@ func (r *Renderer) resolvePlaceholders(cells []cell) []placement {
 		p := *c.placeholder
 		p.inherit(previous)
 		previous, lastX, lastY = &p, c.x, c.y
-		target, ok := targets[key{p.low | uint32(p.high)<<24, p.placement}]
+		id := p.low | uint32(p.high)<<24
+		target, ok := targets[key{id, p.placement}]
 		if !ok {
+			r.frameMissingImages[id] = struct{}{}
 			continue
 		} // still suppress missing-image placeholder glyphs
 		cols, rows := int(target.meta.Columns), int(target.meta.Rows)
@@ -134,6 +139,7 @@ func (r *Renderer) resolvePlaceholders(cells []cell) []placement {
 				continue
 			}
 		}
+		r.frameImages[id] = struct{}{}
 		target.fragment = &f
 		out = append(out, target)
 	}

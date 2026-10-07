@@ -38,6 +38,10 @@ type Renderer struct {
 	blinkStart                                       time.Time
 	frame                                            *image.RGBA
 	frameBlinks, frameBlinkOn                        bool
+	frameImages, frameMissingImages                  map[uint32]struct{}
+	presented                                        *image.RGBA
+	presentedImages                                  map[uint32]struct{}
+	imageGapUntil                                    time.Time
 	term                                             *vt.Terminal
 	state                                            *vt.RenderState
 	rows                                             *vt.RenderStateRowIterator
