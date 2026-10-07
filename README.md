@@ -125,7 +125,8 @@ limited to 8192 pixels per side and 16 megapixels.
 
 ## Documentation
 
-- [docs/tapes.md](docs/tapes.md): the tape language, commands, settings, and capture timing.
+- The [user guide](https://nimblemarkets.github.io/sigmamax/): installing, a first recording, writing tapes, appearance, output formats, recording images, and troubleshooting.
+- [docs/tapes.md](docs/tapes.md): reference for the tape language, commands, settings, and capture timing.
 - [docs/rendering.md](docs/rendering.md): fonts, the renderer, and the supported Kitty graphics slice.
 - [docs/development.md](docs/development.md): building from source, tests and CI, and releases.
 
