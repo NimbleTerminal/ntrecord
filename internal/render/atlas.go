@@ -5,8 +5,6 @@ import (
 	"image/color"
 	"image/draw"
 
-	"golang.org/x/image/font"
-	"golang.org/x/image/font/opentype"
 	"golang.org/x/image/math/fixed"
 )
 
@@ -17,7 +15,7 @@ type glyphKey struct {
 }
 
 type atlas struct {
-	faces                 [4]font.Face
+	faces                 [4]*face
 	glyphs                map[glyphKey]*image.RGBA
 	width, height, ascent int
 }
@@ -29,11 +27,7 @@ func newAtlasFamily(size float64, family string) (*atlas, error) {
 		return nil, err
 	}
 	for i, parsed := range fonts {
-		a.faces[i], err = opentype.NewFace(parsed, &opentype.FaceOptions{Size: size, DPI: 72, Hinting: font.HintingFull})
-		if err != nil {
-			a.close()
-			return nil, err
-		}
+		a.faces[i] = newFace(parsed, size)
 	}
 	advance, _ := a.faces[0].GlyphAdvance('M')
 	a.width = advance.Ceil()
