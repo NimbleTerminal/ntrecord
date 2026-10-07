@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"image/png"
 	"os"
+	"os/exec"
 	"path/filepath"
 	"slices"
 	"strings"
@@ -126,9 +127,57 @@ func TestRequireUsesTapePATHBeforeSpawning(t *testing.T) {
 
 func TestEnvironmentAdvertisesVersion(t *testing.T) {
 	for version, want := range map[string]string{"v1.2.3": "TERM_PROGRAM_VERSION=1.2.3", "": "TERM_PROGRAM_VERSION=dev"} {
-		env := environment([]string{"TERM_PROGRAM_VERSION=stale"}, tape.Config{Version: version}.ProgramVersion())
+		env := environment([]string{"TERM_PROGRAM_VERSION=stale"}, tape.Config{Version: version}.ProgramVersion(), "")
 		if !slices.Contains(env, want) || slices.Contains(env, "TERM_PROGRAM_VERSION=stale") {
 			t.Errorf("version %q: %v", version, env)
 		}
+	}
+}
+
+func TestEnvironmentDeclaresGhosttyTerminal(t *testing.T) {
+	env := environment([]string{"TERM=dumb", "TERMINFO=/users/own", "TERMINFO_DIRS=/other"}, "dev", "/our/db")
+	for _, want := range []string{"TERM=xterm-ghostty", "TERMINFO=/our/db", "TERMINFO_DIRS=/users/own:/other"} {
+		if !slices.Contains(env, want) {
+			t.Errorf("missing %s in %v", want, env)
+		}
+	}
+	for _, stale := range []string{"TERM=dumb", "TERMINFO=/users/own", "TERMINFO_DIRS=/other"} {
+		if slices.Contains(env, stale) {
+			t.Errorf("stale %s survived in %v", stale, env)
+		}
+	}
+	// Without a directory the entry cannot be found: do not claim it.
+	fallback := environment([]string{"TERMINFO=/users/own"}, "dev", "")
+	if !slices.Contains(fallback, "TERM=xterm-256color") || !slices.Contains(fallback, "TERMINFO=/users/own") {
+		t.Errorf("fallback environment: %v", fallback)
+	}
+}
+
+// A real recorded program sees the identity programs use to detect Kitty
+// graphics, and its terminfo reader finds the entry on a host without Ghostty.
+func TestRecordedProgramSeesGhosttyTerminal(t *testing.T) {
+	if _, err := exec.LookPath("tput"); err != nil {
+		t.Skip("tput unavailable")
+	}
+	tmp := t.TempDir()
+	t.Setenv("TMPDIR", tmp)
+	t.Setenv("HOME", filepath.Join(tmp, "no-home")) // a host Ghostty cannot answer
+	txt := filepath.Join(t.TempDir(), "out.txt")
+	source := fmt.Sprintf("Output %q\nSet Shell /bin/sh\nSet Cols 60\nSet Rows 5\nSet TypingSpeed 1ms\nType 'echo term=$TERM colors=$(tput colors)'\nEnter\nWait+Screen /colors=256/\n", txt)
+	p, err := tape.Parse(strings.NewReader(source))
+	if err != nil {
+		t.Fatal(err)
+	}
+	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+	defer cancel()
+	if err = Run(ctx, Options{Config: p.Config, Tape: p}); err != nil {
+		t.Fatal(err)
+	}
+	b, err := os.ReadFile(txt)
+	if err != nil || !strings.Contains(string(b), "term=xterm-ghostty colors=256") {
+		t.Fatalf("terminal identity not visible to the program: %v\n%s", err, b)
+	}
+	if left, _ := filepath.Glob(filepath.Join(tmp, "sigmamax-terminfo-*")); len(left) != 0 {
+		t.Errorf("terminfo directory not removed: %v", left)
 	}
 }

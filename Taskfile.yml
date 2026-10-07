@@ -24,6 +24,9 @@ tasks:
     run: once
     cmds:
       - 'if ! "$PKG_CONFIG" --exists --static libghostty-vt-static 2>/dev/null; then sh scripts/build-libghostty.sh; fi'
+  terminfo:
+    desc: Regenerate internal/terminfo from the pinned Ghostty revision (needs tic)
+    cmds: ['sh scripts/terminfo.sh']
   build:
     desc: Build bin/sigmamax
     deps: [native-check]

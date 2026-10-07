@@ -26,17 +26,18 @@ Animation frames, relative placements, and images sent through shared memory or 
 
 ## Make the program use graphics
 
-Many programs decide whether to draw images by looking at the environment, and sigmamax does not look like Kitty or Ghostty to them. If nothing shows up, check the program's own setting for graphics, and these:
+sigmamax tells the program it is running in Ghostty (`TERM=xterm-ghostty`), which is how most programs learn that a terminal can draw images, so most need no setup. If nothing shows up:
 
 - **`NO_COLOR` must not be set.** Placeholder images carry their identity in text colors, so a program that turns colors off cannot show them. Run it with `env -u NO_COLOR`.
-- **Turn off tmux passthrough** if the program has such a setting; there is no tmux between it and the recorder.
-- **Force the capability.** Some programs have a switch for "assume Kitty graphics". For ntcharts' shader example:
+- **Ask for direct image transfer** if the program has a choice of how to send images. For ntcharts' shader example:
 
 ```sh
-env -u NO_COLOR NTCHARTS_KITTY=supported NTCHARTS_TMUX_PASSTHROUGH=false \
-  sigmamax record -o shaders.gif -cols 80 -rows 24 -- \
+env -u NO_COLOR sigmamax record -o shaders.gif -cols 80 -rows 24 -- \
   go run . -medium=direct -fullscreen -fps=20 -duration=8s
 ```
+
+- **Check the program's own graphics setting.** Some programs have a switch to force or disable Kitty graphics. If one only looks at `TERM_PROGRAM`, which is `sigmamax`, set that switch.
+- **A tape can change the terminal name** with `Env TERM xterm-256color` for a program that misbehaves under `xterm-ghostty`.
 
 ## Frames that flicker
 

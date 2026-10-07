@@ -46,7 +46,10 @@ go run . examples/text.tape
 Native setup downloads and builds Ghostty commit
 `0e0ff282f72c92d930d41f4703547d3bc9618ba2` locally under `.deps/`. The Go binding
 is pinned in go.mod to commit `183d2bc56a8a` (pseudo-version
-`v0.0.0-20261004135024-183d2bc56a8a`). Its API is unstable; update these together.
+`v0.0.0-20261004135024-183d2bc56a8a`). Its API is unstable; update these together, then run `task terminfo` to
+regenerate the embedded `xterm-ghostty` terminfo entry from the same Ghostty
+revision (needs `tic` from ncurses; a test fails if the entry and its source
+diverge).
 An existing matching installation can be used by setting `PKG_CONFIG_PATH` to
 its `share/pkgconfig` directory and `PKG_CONFIG` to your pkg-config executable.
 `ZIG=/absolute/path/to/zig` overrides the downloaded compiler; overrides must

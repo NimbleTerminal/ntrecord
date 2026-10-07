@@ -18,6 +18,7 @@ import (
 
 	"github.com/NimbleMarkets/sigmamax/internal/render"
 	"github.com/NimbleMarkets/sigmamax/internal/tape"
+	"github.com/NimbleMarkets/sigmamax/internal/terminfo"
 	"github.com/creack/pty"
 )
 
@@ -73,7 +74,18 @@ func Run(parent context.Context, opts Options) error {
 		speed = 1
 	}
 	period := time.Duration(float64(time.Second) / rate)
-	env := environment(os.Environ(), opts.Config.ProgramVersion())
+	// The recorded program's terminfo lives in a private directory, removed when
+	// the recording ends. If it cannot be made, the program gets xterm-256color.
+	terminfoDir, err := os.MkdirTemp("", "sigmamax-terminfo-")
+	if err == nil {
+		defer os.RemoveAll(terminfoDir)
+		if err = terminfo.Install(terminfoDir); err != nil {
+			terminfoDir = ""
+		}
+	} else {
+		terminfoDir = ""
+	}
+	env := environment(os.Environ(), opts.Config.ProgramVersion(), terminfoDir)
 	for key, value := range opts.Config.Env {
 		env = replaceEnv(env, key, value)
 	}
@@ -520,17 +532,40 @@ func play(ctx context.Context, actions []tape.Action, events chan<- event) error
 	return nil
 }
 
-func environment(base []string, version string) []string {
+// environment is the recorded program's environment. It declares Ghostty's
+// terminal, the identity programs check to learn the terminal draws Kitty
+// graphics. terminfoDir holds that terminal's entry (see package terminfo); a
+// user's own TERMINFO stays searchable through TERMINFO_DIRS. Without a
+// directory the entry cannot be found, so it falls back to xterm-256color.
+func environment(base []string, version, terminfoDir string) []string {
 	var env []string
+	var userInfo, userDirs string
 	for _, s := range base {
-		key, _, _ := strings.Cut(s, "=")
+		key, value, _ := strings.Cut(s, "=")
 		switch key {
 		case "TERM", "COLORTERM", "TERM_PROGRAM", "TERM_PROGRAM_VERSION", "PS1", "PS2":
 			continue
+		case "TERMINFO", "TERMINFO_DIRS":
+			if terminfoDir != "" {
+				if key == "TERMINFO" {
+					userInfo = value
+				} else {
+					userDirs = value
+				}
+				continue
+			}
 		}
 		env = append(env, s)
 	}
-	return append(env, "TERM=xterm-256color", "COLORTERM=truecolor", "TERM_PROGRAM=sigmamax", "TERM_PROGRAM_VERSION="+version, "PS1=$ ", "PS2=> ")
+	term := "xterm-256color"
+	if terminfoDir != "" {
+		term = terminfo.Term
+		env = append(env, "TERMINFO="+terminfoDir)
+		if dirs := strings.Trim(userInfo+":"+userDirs, ":"); dirs != "" {
+			env = append(env, "TERMINFO_DIRS="+dirs)
+		}
+	}
+	return append(env, "TERM="+term, "COLORTERM=truecolor", "TERM_PROGRAM=sigmamax", "TERM_PROGRAM_VERSION="+version, "PS1=$ ", "PS2=> ")
 }
 
 func replaceEnv(env []string, key, value string) []string {

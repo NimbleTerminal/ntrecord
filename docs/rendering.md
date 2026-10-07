@@ -32,12 +32,19 @@ transport, and temporary-file transport are deferred. The file/shared-memory
 transports remain disabled. libghostty may parse a broader protocol, but these
 features are not part of sigmamax's v1 rendering contract.
 
-For ntcharts' shader example, request direct transport and explicitly enable
-Kitty capability (ntcharts' environment detection does not recognize sigmamax):
+Recorded programs run with `TERM=xterm-ghostty`, the identity programs check to
+learn that a terminal draws Kitty graphics. The matching terminfo entry, generated
+from the pinned Ghostty revision (`task terminfo`), is embedded in the binary and
+made available to the program through `TERMINFO` for the length of the recording,
+so terminfo readers work on hosts without Ghostty. A tape's `Env TERM ...` still
+overrides it. `TERM_PROGRAM` is `sigmamax`.
+
+For ntcharts' shader example, request direct transport; ntcharts recognizes the
+terminal without any override:
 
 ```sh
 cd /path/to/ntcharts/examples/shaders
-env -u NO_COLOR NTCHARTS_KITTY=supported NTCHARTS_TMUX_PASSTHROUGH=false \
+env -u NO_COLOR \
   /path/to/sigmamax/bin/sigmamax record -o /tmp/shaders.gif -cols 80 -rows 24 -- \
   go run . -medium=direct -fullscreen -fps=20 -duration=8s
 ```
