@@ -83,6 +83,9 @@ func run() error {
 			fmt.Printf("%s %s: %d GIF frames verified\n", name, format, count)
 		}
 	}
+	if err := verifyUnicode(ctx, bin, dir); err != nil {
+		return err
+	}
 	fmt.Print(string(version))
 	return nil
 }

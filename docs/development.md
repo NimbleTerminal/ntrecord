@@ -189,6 +189,12 @@ the CLI: macOS requires `select` here because `poll` only works on the PTY slave
 Release archive smoke tests run on macOS and Linux, on both CPU architectures.
 They exercise the extracted binary without native build tools, checking text
 and Kitty image pixels in direct GIF recordings and in cast-to-GIF round trips.
+Unicode smoke cases also check direct PNG recordings and cast-to-PNG replay
+against reviewed renderer golden hashes, with system fallback disabled. They
+cover bundled symbol fallback, color emoji sequences and presentation selectors,
+combining accents, and box/block/braille geometry. When intentionally updating
+these renderer golden scenarios, review the PNGs and update the matching hashes
+and inputs in `internal/tools/release-smoke/unicode.go` together.
 
 GIF encoding uses a recording-wide adaptive palette, exact theme/flat colors,
 and changed-region patches. Sources are compressed in memory until finalization;
