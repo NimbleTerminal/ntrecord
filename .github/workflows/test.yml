@@ -48,7 +48,7 @@ jobs:
             examples/language.txt
 
   # The same terminal state must draw the same pixels everywhere. Each platform
-  # checks the committed hashes in internal/render/testdata/golden, so passing on
+  # checks the committed hashes in render/testdata/golden, so passing on
   # all four means macOS and Linux, amd64 and arm64, render byte-identical frames.
   golden:
     timeout-minutes: 30

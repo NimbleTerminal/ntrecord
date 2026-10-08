@@ -9,10 +9,11 @@ import (
 	"strconv"
 	"time"
 
-	"nimbleterminal.dev/ntrecord/internal/asciicast"
+	"nimbleterminal.dev/ntrecord/asciicast"
 	"nimbleterminal.dev/ntrecord/internal/encode"
-	"nimbleterminal.dev/ntrecord/internal/render"
+	"nimbleterminal.dev/ntrecord/internal/renderconfig"
 	"nimbleterminal.dev/ntrecord/internal/tape"
+	"nimbleterminal.dev/ntrecord/render"
 )
 
 // RenderCast renders events without running a shell or waiting for wall time.
@@ -49,7 +50,7 @@ func RenderCast(ctx context.Context, src io.Reader, c tape.Config) error {
 	if speed <= 0 || math.IsNaN(speed) || math.IsInf(speed, 0) {
 		return fmt.Errorf("speed must be finite and positive")
 	}
-	r, err := render.New(c)
+	r, err := render.New(renderconfig.FromTape(c))
 	if err != nil {
 		return err
 	}

@@ -146,7 +146,7 @@ the old GIF has eight dither colors there; the new GIF has one. The 330×342 QR 
 at (472,81), including white quiet space and black modules, is **pixel-identical**
 to the source. This checks pixel fidelity, not scanning with a QR reader.
 
-`internal/gifencode/delta_test.go` uses FFmpeg as an independent compositor,
+`gifencode/delta_test.go` uses FFmpeg as an independent compositor,
 comparing optimized GIFs with full-canvas references across two loops and several
 LoopOffsets. It covers disappearance, replacement, transparency, opaque fallback
 when every palette entry is needed, exact backgrounds beside gradients, late

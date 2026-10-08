@@ -39,10 +39,10 @@ archives:
       - docs/*.md
       - LICENSE
       - FONT-LICENSE
-      - src: internal/render/fonts/*.LICENSE
+      - src: render/fonts/*.LICENSE
         dst: licenses/fonts
         strip_parent: true
-      - src: internal/render/fonts/README.md
+      - src: render/fonts/README.md
         dst: licenses/fonts/README.md
       - src: internal/theme/LICENSE
         dst: licenses/vhs-themes/LICENSE

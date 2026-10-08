@@ -64,11 +64,11 @@ tasks:
       - rm -rf .deps
   fmt:
     desc: Format Go sources
-    cmds: [gofmt -w ./*.go internal examples]
+    cmds: [gofmt -w ./*.go internal examples render gifencode asciicast testdata/library]
   fmt-check:
     desc: Check Go formatting
     cmds:
-      - 'files=$(gofmt -l ./*.go internal examples); if [ -n "$files" ]; then printf "%s\n" "$files"; exit 1; fi'
+      - 'files=$(gofmt -l ./*.go internal examples render gifencode asciicast testdata/library); if [ -n "$files" ]; then printf "%s\n" "$files"; exit 1; fi'
   go-tidy:
     desc: Tidy module dependencies
     cmds: [go mod tidy]
@@ -80,6 +80,10 @@ tasks:
     desc: Run tests (pass go test flags after --)
     deps: [native-check]
     cmds: ['go test -mod=readonly {{.CLI_ARGS}} ./...']
+  test:library:
+    desc: Verify public packages from an external module, with and without cgo
+    deps: [native-check]
+    cmds: [sh scripts/test-library.sh]
   video-check:
     internal: true
     preconditions:
@@ -103,7 +107,7 @@ tasks:
   test:golden:
     desc: Check the renderer's golden frames, as CI does on four platforms (see docs/development.md)
     deps: [native-check]
-    cmds: ['go test -mod=readonly -count=1 -run "Golden|FaceMatches" {{.CLI_ARGS}} ./internal/render']
+    cmds: ['go test -mod=readonly -count=1 -run "Golden|FaceMatches" {{.CLI_ARGS}} ./render']
   test:fma:
     desc: Re-run the golden frames with FMA fusion off, imitating amd64 arithmetic on arm64
     deps: [native-check]
@@ -123,6 +127,7 @@ tasks:
       - task: go-tidy-check
       - task: go-verify
       - task: test-race
+      - task: test:library
       - task: vet
       - task: build
   demo:kitty:

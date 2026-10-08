@@ -11,8 +11,6 @@ import (
 	"path/filepath"
 	"strings"
 	"testing"
-
-	"nimbleterminal.dev/ntrecord/internal/tape"
 )
 
 func TestBrailleDotsAndCellEdges(t *testing.T) {
@@ -128,7 +126,7 @@ func TestClusterFallbackAndShaping(t *testing.T) {
 }
 func TestUnicodeRenderer(t *testing.T) {
 	t.Setenv("NTRECORD_FONT_PATH", "")
-	c := tape.DefaultConfig()
+	c := DefaultConfig()
 	c.Cols, c.Rows, c.FontSize = 64, 14, 24
 	r, err := New(c)
 	if err != nil {
@@ -208,7 +206,7 @@ func TestInstalledCJKFallback(t *testing.T) {
 }
 func TestEmojiGridAndVariationSelectors(t *testing.T) {
 	t.Setenv("NTRECORD_FONT_PATH", "")
-	c := tape.DefaultConfig()
+	c := DefaultConfig()
 	c.Cols, c.Rows = 32, 3
 	r, err := New(c)
 	if err != nil {
@@ -250,7 +248,7 @@ func (r *Renderer) stateCursorForTest() (int, error) {
 
 func TestClusterStreamingWrapAndErase(t *testing.T) {
 	t.Setenv("NTRECORD_FONT_PATH", "")
-	c := tape.DefaultConfig()
+	c := DefaultConfig()
 	c.Cols, c.Rows = 8, 3
 	whole, err := New(c)
 	if err != nil {
@@ -362,7 +360,7 @@ func TestDoubleLineJunctionGaps(t *testing.T) {
 
 func BenchmarkUnicodeFrame(b *testing.B) {
 	b.Setenv("NTRECORD_FONT_PATH", "")
-	c := tape.DefaultConfig()
+	c := DefaultConfig()
 	c.Cols, c.Rows = 80, 24
 	r, err := New(c)
 	if err != nil {

@@ -19,9 +19,10 @@ import (
 	"unicode/utf8"
 
 	"github.com/creack/pty"
-	"nimbleterminal.dev/ntrecord/internal/render"
+	"nimbleterminal.dev/ntrecord/internal/renderconfig"
 	"nimbleterminal.dev/ntrecord/internal/tape"
 	"nimbleterminal.dev/ntrecord/internal/terminfo"
+	"nimbleterminal.dev/ntrecord/render"
 )
 
 type Options struct {
@@ -83,7 +84,7 @@ func Run(parent context.Context, opts Options) error {
 	if virtual && opts.Tape == nil {
 		return errors.New("deterministic mode needs a tape: a live recording follows a person's clock")
 	}
-	r, err := render.New(opts.Config)
+	r, err := render.New(renderconfig.FromTape(opts.Config))
 	if err != nil {
 		return err
 	}

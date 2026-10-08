@@ -1,4 +1,7 @@
-// Package gifencode builds one recording-wide palette and writes GIF deltas.
+// Package gifencode encodes timed RGBA frames as animated GIFs with a global
+// adaptive palette, repeated-frame merging, and changed-region deltas.
+// It uses only the Go standard library; no external encoder is required.
+// Encoders must not be used concurrently.
 package gifencode
 
 import (
@@ -15,6 +18,10 @@ import (
 	"time"
 )
 
+// Encoder accumulates frames within a memory budget. Its zero value is ready
+// for use. Set options before the first Add and leave them unchanged afterward.
+// Input frames must be opaque; composite transparency onto a background first.
+// The resulting GIF loops forever. No method closes a caller-owned writer.
 type Encoder struct {
 	// Seed colors (theme, decorations) are exact, alongside black and white.
 	Seed color.Palette
@@ -60,6 +67,9 @@ func (e *Encoder) budget(pixels, retained, compressed int64, frames, width int) 
 	return nil
 }
 
+// Add copies frame pixels before returning, so callers may reuse the input.
+// Frames must have equal dimensions and zero-origin bounds. Nonpositive durations
+// are ignored; positive durations accumulate and round to GIF centiseconds.
 func (e *Encoder) Add(frame *image.RGBA, duration time.Duration) error {
 	if e.failure != nil {
 		return e.failure
@@ -219,7 +229,7 @@ func (e *Encoder) quantized() (gif.GIF, error) {
 		return g, e.failure
 	}
 	if len(e.sources) == 0 {
-		return g, fmt.Errorf("recording has no visible frames (use Show before finishing)")
+		return g, fmt.Errorf("GIF encoding has no visible frames")
 	}
 	pixels := int64(g.Config.Width) * int64(g.Config.Height)
 	if err := e.budget(pixels, e.bytes, e.compressed, len(e.sources), g.Config.Width); err != nil {
@@ -273,6 +283,9 @@ func (e *Encoder) quantized() (gif.GIF, error) {
 	return g, nil
 }
 
+// Encode writes the collected animation to w without closing it. It may be
+// called again with another writer. It reports palette/encoding errors and any
+// deferred error from Rotate. The encoder retains its frames until released.
 func (e *Encoder) Encode(w io.Writer) error {
 	g, err := e.quantized()
 	if err != nil {

@@ -10,12 +10,12 @@ import (
 	"testing"
 	"time"
 
-	"nimbleterminal.dev/ntrecord/internal/asciicast"
+	"nimbleterminal.dev/ntrecord/asciicast"
 	"nimbleterminal.dev/ntrecord/internal/tape"
 )
 
 func TestSeekReconstructsKittyState(t *testing.T) {
-	fixture, err := os.ReadFile("../render/testdata/kitty.apc")
+	fixture, err := os.ReadFile("../../render/testdata/kitty.apc")
 	if err != nil {
 		t.Fatal(err)
 	}

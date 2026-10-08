@@ -17,7 +17,7 @@ import (
 	"syscall"
 	"time"
 
-	"nimbleterminal.dev/ntrecord/internal/gifencode"
+	"nimbleterminal.dev/ntrecord/gifencode"
 )
 
 // Extensions lists every output file extension Format accepts.

@@ -1,7 +1,7 @@
 // Package boundaries holds the test that keeps ntrecord's package structure
 // honest. Each package lists what it may import; anything else fails the build.
 // The point is to keep three seams narrow: libghostty (and so cgo) is reached
-// only through internal/render, external programs are started only by the
+// only through render, external programs are started only by the
 // packages that own them, and the leaf packages stay free of the rest.
 package boundaries
 
@@ -29,16 +29,17 @@ type rule struct {
 // rules is the allow-list. A new package must be added here, which is the
 // moment to decide what it may depend on.
 var rules = map[string]rule{
-	".":                  {internal: []string{"internal/doctor", "internal/encode", "internal/player", "internal/record", "internal/tape"}, external: []string{"golang.org/x/term"}},
-	"internal/doctor":    {internal: []string{"internal/encode", "internal/render", "internal/tape", "internal/terminfo"}, external: []string{"github.com/creack/pty"}, exec: true},
-	"internal/encode":    {internal: []string{"internal/gifencode"}, exec: true},
-	"internal/gifencode": {},
-	"internal/playback":  {internal: []string{"internal/asciicast", "internal/render", "internal/tape"}},
-	"internal/player":    {internal: []string{"internal/playback", "internal/tape"}, external: []string{"golang.org/x/term", "golang.org/x/sys/unix"}},
-	"internal/asciicast": {}, // standard-library event codec, independent of rendering
-	"internal/record":    {internal: []string{"internal/asciicast", "internal/encode", "internal/render", "internal/tape", "internal/terminfo"}, external: []string{"github.com/creack/pty"}, exec: true},
+	"internal/renderconfig": {internal: []string{"internal/tape", "render"}},
+	".":                     {internal: []string{"internal/doctor", "internal/encode", "internal/player", "internal/record", "internal/tape"}, external: []string{"golang.org/x/term"}},
+	"internal/doctor":       {internal: []string{"internal/encode", "render", "internal/tape", "internal/terminfo"}, external: []string{"github.com/creack/pty"}, exec: true},
+	"internal/encode":       {internal: []string{"gifencode"}, exec: true},
+	"gifencode":             {},
+	"internal/playback":     {internal: []string{"internal/renderconfig", "asciicast", "render", "internal/tape"}},
+	"internal/player":       {internal: []string{"internal/playback", "internal/tape"}, external: []string{"golang.org/x/term", "golang.org/x/sys/unix"}},
+	"asciicast":             {}, // standard-library event codec, independent of rendering
+	"internal/record":       {internal: []string{"internal/renderconfig", "asciicast", "internal/encode", "render", "internal/tape", "internal/terminfo"}, external: []string{"github.com/creack/pty"}, exec: true},
 	// The only package that may import libghostty, so cgo stays behind one door.
-	"internal/render":    {internal: []string{"internal/tape", "internal/theme"}, external: []string{"go.mitchellh.com/libghostty", "golang.org/x/image", "github.com/go-text/typesetting", "golang.org/x/text/unicode/norm"}},
+	"render":             {internal: []string{"internal/theme"}, external: []string{"go.mitchellh.com/libghostty", "golang.org/x/image", "github.com/go-text/typesetting", "golang.org/x/text/unicode/norm"}},
 	"internal/tape":      {internal: []string{"internal/encode", "internal/theme"}},
 	"internal/terminfo":  {},
 	"internal/testvideo": {exec: true}, // test helper that drives ffmpeg/ffprobe
@@ -84,13 +85,13 @@ func TestViolationsBite(t *testing.T) {
 		imports []string
 		want    string // substring of the one expected violation; "" for none
 	}{
-		{"internal/render", []string{"fmt", "go.mitchellh.com/libghostty", "go.mitchellh.com/libghostty/sys/png", module + "/internal/theme"}, ""},
+		{"render", []string{"fmt", "go.mitchellh.com/libghostty", "go.mitchellh.com/libghostty/sys/png", module + "/internal/theme"}, ""},
 		{"internal/record", []string{"go.mitchellh.com/libghostty"}, "go.mitchellh.com/libghostty"},
-		{"internal/tape", []string{module + "/internal/render"}, "imports internal/render"},
-		{"internal/gifencode", []string{"os/exec"}, "os/exec"},
+		{"internal/tape", []string{module + "/render"}, "imports render"},
+		{"gifencode", []string{"os/exec"}, "os/exec"},
 		{"internal/theme", []string{"golang.org/x/image/draw"}, "golang.org/x/image/draw"},
-		{"internal/encode", []string{"os/exec", module + "/internal/gifencode"}, ""},
-		{"internal/render", []string{"C"}, `"C"`},
+		{"internal/encode", []string{"os/exec", module + "/gifencode"}, ""},
+		{"render", []string{"C"}, `"C"`},
 		{"internal/brandnew", []string{"fmt"}, "no boundary rule"},
 	}
 	for _, c := range cases {
@@ -140,8 +141,8 @@ func TestRepositoryRespectsBoundaries(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if _, ok := found["internal/render"]; !ok {
-		t.Fatalf("walked the wrong tree (%s): internal/render not found", root)
+	if _, ok := found["render"]; !ok {
+		t.Fatalf("walked the wrong tree (%s): render not found", root)
 	}
 	for pkg, imports := range found {
 		if exempt(pkg) {

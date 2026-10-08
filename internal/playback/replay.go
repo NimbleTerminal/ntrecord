@@ -12,9 +12,10 @@ import (
 	"strconv"
 	"time"
 
-	"nimbleterminal.dev/ntrecord/internal/asciicast"
-	"nimbleterminal.dev/ntrecord/internal/render"
+	"nimbleterminal.dev/ntrecord/asciicast"
+	"nimbleterminal.dev/ntrecord/internal/renderconfig"
 	"nimbleterminal.dev/ntrecord/internal/tape"
+	"nimbleterminal.dev/ntrecord/render"
 )
 
 // Replay owns a renderer, but not src. The caller serializes access. Seeking
@@ -117,7 +118,7 @@ func (p *Replay) reset() error {
 		return fmt.Errorf("cast header changed during playback")
 	}
 	p.reader = reader
-	p.renderer, err = render.New(p.config)
+	p.renderer, err = render.New(renderconfig.FromTape(p.config))
 	if err != nil {
 		return err
 	}

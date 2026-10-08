@@ -9,11 +9,11 @@ import (
 	"strings"
 
 	vt "go.mitchellh.com/libghostty"
-	"nimbleterminal.dev/ntrecord/internal/tape"
+
 	"nimbleterminal.dev/ntrecord/internal/theme"
 )
 
-func (r *Renderer) applyTheme(c tape.Config) error {
+func (r *Renderer) applyTheme(c Config) error {
 	t, err := theme.Parse(c.Theme)
 	if err != nil {
 		return err

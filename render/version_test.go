@@ -3,13 +3,11 @@ package render
 import (
 	"strings"
 	"testing"
-
-	"nimbleterminal.dev/ntrecord/internal/tape"
 )
 
 func TestXtversionReportsConfiguredVersion(t *testing.T) {
 	for version, want := range map[string]string{"v1.2.3": "ntrecord 1.2.3", "": "ntrecord dev"} {
-		c := tape.DefaultConfig()
+		c := DefaultConfig()
 		c.Version = version
 		r, err := New(c)
 		if err != nil {

@@ -1,4 +1,6 @@
 // Package asciicast streams standard asciicast v2/v3 terminal recordings.
+// Readers and writers must not be used concurrently. They never close the
+// caller's streams. Event times are absolute even when encoded as v3 deltas.
 package asciicast
 
 import (
@@ -12,21 +14,24 @@ import (
 	"unicode/utf8"
 )
 
-// MaxLine bounds memory used by an individual event, including inline graphics.
+// MaxLine limits each input line accepted by Reader, including inline graphics.
 const MaxLine = 64 * 1024 * 1024
 
+// Theme holds standard asciicast terminal colors. Palette is colon-separated.
 type Theme struct {
 	FG      string `json:"fg"`
 	BG      string `json:"bg"`
 	Palette string `json:"palette"`
 }
 
+// Terminal describes the initial v3 grid and optional colors.
 type Terminal struct {
 	Cols  int    `json:"cols"`
 	Rows  int    `json:"rows"`
 	Theme *Theme `json:"theme,omitempty"`
 }
 
+// Header contains the supported v2/v3 metadata. Unknown JSON fields are ignored.
 type Header struct {
 	Version  int       `json:"version"`
 	Term     *Terminal `json:"term,omitempty"`
@@ -36,6 +41,7 @@ type Header struct {
 	Duration float64   `json:"duration,omitempty"`
 }
 
+// Size returns columns and rows regardless of format version.
 func (h Header) Size() (int, int) {
 	if h.Version == 3 && h.Term != nil {
 		return h.Term.Cols, h.Term.Rows
@@ -43,6 +49,7 @@ func (h Header) Size() (int, int) {
 	return h.Width, h.Height
 }
 
+// Colors returns the terminal theme, or nil if no theme was recorded.
 func (h Header) Colors() *Theme {
 	if h.Version == 3 && h.Term != nil {
 		return h.Term.Theme
@@ -68,12 +75,14 @@ func (t *Theme) ThemeJSON() (string, error) {
 	return string(b), err
 }
 
+// Event holds one terminal event. Unknown event codes are preserved by Reader.
 type Event struct {
 	At   time.Duration // absolute time, for both format versions
 	Code string
 	Data string
 }
 
+// Reader incrementally decodes a recording. Treat Header as read-only.
 type Reader struct {
 	Header  Header
 	scanner *bufio.Scanner
@@ -81,6 +90,7 @@ type Reader struct {
 	at      time.Duration
 }
 
+// NewReader reads and validates the header from src.
 func NewReader(src io.Reader) (*Reader, error) {
 	r := &Reader{scanner: bufio.NewScanner(src), line: 1}
 	r.scanner.Buffer(make([]byte, 4096), MaxLine)
@@ -116,6 +126,8 @@ func seconds(v float64) (time.Duration, error) {
 	return time.Duration(v * float64(time.Second)), nil
 }
 
+// Next returns the next event, or io.EOF at the end of the recording.
+// Returned event strings remain valid after subsequent calls.
 func (r *Reader) Next() (Event, error) {
 	for r.scanner.Scan() {
 		r.line++
@@ -185,7 +197,11 @@ type Writer struct {
 	err     error
 }
 
+// NewWriter validates term and immediately writes a v3 header to dst.
 func NewWriter(dst io.Writer, term Terminal) (*Writer, error) {
+	if term.Cols < 1 || term.Rows < 1 || term.Cols > 8192 || term.Rows > 8192 {
+		return nil, fmt.Errorf("invalid asciicast grid %dx%d", term.Cols, term.Rows)
+	}
 	w := &Writer{enc: json.NewEncoder(dst)}
 	w.enc.SetEscapeHTML(false)
 	if err := w.enc.Encode(Header{Version: 3, Term: &term}); err != nil {
@@ -207,6 +223,8 @@ func (w *Writer) event(at time.Duration, code, data string) error {
 	return w.err
 }
 
+// Output writes terminal bytes at an absolute, nondecreasing timestamp. It
+// consumes b before returning; incomplete UTF-8 is retained for the next call.
 func (w *Writer) Output(at time.Duration, b []byte) error {
 	if w.err != nil {
 		return w.err
@@ -225,7 +243,8 @@ func (w *Writer) Output(at time.Duration, b []byte) error {
 	return w.event(at, "o", text)
 }
 
-// End preserves trailing silence without inventing a process exit status.
+// End flushes incomplete UTF-8 and preserves trailing silence without inventing
+// a process exit status. Call it once after the final Output; it does not close dst.
 func (w *Writer) End(at time.Duration) error {
 	if len(w.pending) > 0 {
 		if err := w.event(at, "o", string(w.pending)); err != nil {

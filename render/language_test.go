@@ -6,12 +6,10 @@ import (
 	"strings"
 	"testing"
 	"time"
-
-	"nimbleterminal.dev/ntrecord/internal/tape"
 )
 
 func TestKeysAndPasteModes(t *testing.T) {
-	r, e := New(tape.DefaultConfig())
+	r, e := New(DefaultConfig())
 	if e != nil {
 		t.Fatal(e)
 	}
@@ -41,7 +39,7 @@ func TestKeysAndPasteModes(t *testing.T) {
 }
 
 func TestTypedTextKeyboardModes(t *testing.T) {
-	r, err := New(tape.DefaultConfig())
+	r, err := New(DefaultConfig())
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -62,7 +60,7 @@ func TestTypedTextKeyboardModes(t *testing.T) {
 }
 
 func TestTextWaitAndScroll(t *testing.T) {
-	c := tape.DefaultConfig()
+	c := DefaultConfig()
 	c.Cols = 30
 	c.Rows = 3
 	r, e := New(c)
@@ -95,7 +93,7 @@ func TestTextWaitAndScroll(t *testing.T) {
 }
 
 func TestThemeGeometryAndCursorBlink(t *testing.T) {
-	c := tape.DefaultConfig()
+	c := DefaultConfig()
 	c.Cols = 10
 	c.Rows = 3
 	c.Padding = 8

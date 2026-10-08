@@ -9,6 +9,6 @@ cd "$root"
 log=$(mktemp)
 trap 'rm -f "$log"' EXIT HUP INT TERM
 status=0
-go test -mod=readonly -count=1 -gcflags=all=-d=fmahash=n -run 'Golden|FaceMatches' ./internal/render >"$log" 2>&1 || status=$?
+go test -mod=readonly -count=1 -gcflags=all=-d=fmahash=n -run 'Golden|FaceMatches' ./render >"$log" 2>&1 || status=$?
 grep -v -E 'bisect-match|fmahash triggered|^# ' "$log" || true
 exit "$status"

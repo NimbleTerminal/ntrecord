@@ -163,6 +163,14 @@ The recorded window keeps the size you asked for. Limits and failure behavior:
 - If the program fails, or output cannot be forwarded (a closed stdout pipe, for example), ntrecord tries to save every output first and then returns the error.
 - FFmpeg writes have a 30-second deadline and are interrupted on cancellation. A video stream that fails or is cut off cannot always be saved. Other formats finish independently, and an existing file is replaced only after a successful encode.
 
+## Go libraries
+
+Use `nimbleterminal.dev/ntrecord/gifencode` for animated GIF encoding,
+`nimbleterminal.dev/ntrecord/asciicast` for terminal-event streams, and
+`nimbleterminal.dev/ntrecord/render` for terminal-to-image rendering. The two
+codecs use only the standard library; the renderer requires cgo/libghostty-vt.
+See [library APIs and build instructions](docs/libraries.md).
+
 ## Documentation
 
 - The [user guide](https://nimbleterminal.github.io/ntrecord/): installing, a first recording, tapes, appearance, output formats, recording images, and troubleshooting.
@@ -178,7 +186,7 @@ Thank you to [Charm](https://charm.sh) for [VHS](https://github.com/charmbracele
 
 ## License
 
-This project is released under the [MIT License](https://en.wikipedia.org/wiki/MIT_License), see [`LICENSE`](./LICENSE).  Go Mono is covered by [`FONT-LICENSE`](FONT-LICENSE); bundled Noto fonts have [OFL notices and source information](internal/render/fonts/README.md).
+This project is released under the [MIT License](https://en.wikipedia.org/wiki/MIT_License), see [`LICENSE`](./LICENSE).  Go Mono is covered by [`FONT-LICENSE`](FONT-LICENSE); bundled Noto fonts have [OFL notices and source information](render/fonts/README.md).
 
 Copyright (c) 2026 [Neomantra Corp](https://www.neomantra.com).
 

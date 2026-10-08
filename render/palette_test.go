@@ -4,12 +4,10 @@ import (
 	"image/color"
 	"slices"
 	"testing"
-
-	"nimbleterminal.dev/ntrecord/internal/tape"
 )
 
 func TestPaletteSeedCarriesThemeColors(t *testing.T) {
-	c := tape.DefaultConfig()
+	c := DefaultConfig()
 	c.Theme = "Catppuccin Mocha"
 	c.MarginFill = "#112233"
 	c.Margin = 4
@@ -38,7 +36,7 @@ func TestPaletteSeedCarriesThemeColors(t *testing.T) {
 }
 
 func TestPaletteSeedDefaultsWithoutTheme(t *testing.T) {
-	r, err := New(tape.DefaultConfig())
+	r, err := New(DefaultConfig())
 	if err != nil {
 		t.Fatal(err)
 	}

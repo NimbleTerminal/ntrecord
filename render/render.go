@@ -15,7 +15,6 @@ import (
 	vt "go.mitchellh.com/libghostty"
 	syspng "go.mitchellh.com/libghostty/sys/png"
 	xdraw "golang.org/x/image/draw"
-	"nimbleterminal.dev/ntrecord/internal/tape"
 )
 
 var initPNG = sync.OnceValue(func() error { return vt.SysSetDecodePng(syspng.Decode) })
@@ -32,27 +31,33 @@ type cachedImage struct {
 	pixels     *image.NRGBA
 }
 
+// Renderer owns a terminal and its rendering caches. Create it with New and
+// release its native resources with Close. Calls must be serialized by the caller;
+// separate Renderer instances may be used concurrently.
 type Renderer struct {
-	config                                           tape.Config
-	outputWidth, outputHeight, barHeight             int
-	blinkStart                                       time.Time
-	frame                                            *image.RGBA
-	frameBlinks, frameBlinkOn                        bool
-	frameImages, frameMissingImages                  map[uint32]struct{}
-	presented                                        *image.RGBA
-	presentedImages                                  map[uint32]struct{}
-	imageGapUntil                                    time.Time
-	term                                             *vt.Terminal
-	state                                            *vt.RenderState
-	rows                                             *vt.RenderStateRowIterator
-	cells                                            *vt.RenderStateRowCells
-	iter                                             *vt.KittyGraphicsPlacementIterator
-	atlas                                            *atlas
-	placements                                       []placement
-	images                                           map[uint32]cachedImage
-	replies                                          []byte
-	holdUntil                                        time.Time
-	writeTime                                        time.Time
+	closed                               bool
+	config                               Config
+	outputWidth, outputHeight, barHeight int
+	blinkStart                           time.Time
+	frame                                *image.RGBA
+	frameBlinks, frameBlinkOn            bool
+	frameImages, frameMissingImages      map[uint32]struct{}
+	presented                            *image.RGBA
+	presentedImages                      map[uint32]struct{}
+	imageGapUntil                        time.Time
+	term                                 *vt.Terminal
+	state                                *vt.RenderState
+	rows                                 *vt.RenderStateRowIterator
+	cells                                *vt.RenderStateRowCells
+	iter                                 *vt.KittyGraphicsPlacementIterator
+	atlas                                *atlas
+	placements                           []placement
+	images                               map[uint32]cachedImage
+	replies                              []byte
+	holdUntil                            time.Time
+	writeTime                            time.Time
+	// Dimensions are read-only after New. Width/Height exclude decorations;
+	// OutputSize reports the complete output image dimensions.
 	Cols, Rows, Width, Height, CellWidth, CellHeight int
 }
 
@@ -72,12 +77,14 @@ func EngineInfo() (Engine, error) {
 	return Engine{Version: info.VersionString, KittyGraphics: info.KittyGraphics, SIMD: info.SIMD}, nil
 }
 
-func New(c tape.Config) (_ *Renderer, err error) {
+// New creates a fixed-size terminal. It does not launch a process or open a PTY.
+// It requires the native libghostty-vt library at build/link time.
+func New(c Config) (_ *Renderer, err error) {
 	if err = initPNG(); err != nil {
 		return nil, err
 	}
-	if !(c.FontSize >= 6 && c.FontSize <= 96) {
-		return nil, fmt.Errorf("font size must be between 6 and 96")
+	if err = c.validate(); err != nil {
+		return nil, err
 	}
 	r := &Renderer{config: c, blinkStart: time.Now()}
 	if c.WindowBar != "" && c.WindowBar != "none" {
@@ -142,7 +149,7 @@ func New(c tape.Config) (_ *Renderer, err error) {
 		}),
 		vt.WithSizeReport(func(_ *vt.Terminal) (vt.SizeReportSize, bool) {
 			return vt.SizeReportSize{Columns: uint16(r.Cols), Rows: uint16(r.Rows), CellWidth: uint32(r.CellWidth), CellHeight: uint32(r.CellHeight)}, true
-		}), vt.WithXtversion(func(_ *vt.Terminal) string { return "ntrecord " + c.ProgramVersion() }))
+		}), vt.WithXtversion(func(_ *vt.Terminal) string { return "ntrecord " + c.programVersion() }))
 	if err != nil {
 		return nil, err
 	}
@@ -182,7 +189,13 @@ func New(c tape.Config) (_ *Renderer, err error) {
 	return r, nil
 }
 
+// Close releases native resources and is safe to call more than once.
+// Do not call other methods afterward. Previously returned images remain valid.
 func (r *Renderer) Close() {
+	if r.closed {
+		return
+	}
+	r.closed = true
 	if r.iter != nil {
 		r.iter.Close()
 	}
@@ -203,7 +216,8 @@ func (r *Renderer) Close() {
 	}
 }
 
-// Write is the only VT input path. libghostty parses APCs and produces replies
+// Write consumes terminal bytes synchronously; b may be reused after it returns.
+// It is the only VT input path. libghostty parses APCs and produces replies
 // through WithWritePty; ntrecord never parses escape protocols a second time.
 func (r *Renderer) Write(b []byte) error {
 	r.frame = nil
@@ -211,6 +225,8 @@ func (r *Renderer) Write(b []byte) error {
 	return r.snapshotImages()
 }
 
+// TakeReplies drains terminal protocol replies. The caller owns the returned
+// bytes and may forward them to the process supplying terminal output.
 func (r *Renderer) TakeReplies() []byte {
 	b := r.replies
 	r.replies = nil
@@ -319,7 +335,9 @@ type cell struct {
 	placeholder      *placeholderCell
 }
 
-// Frame returns a cached, immutable bitmap. Callers must not modify it.
+// Frame returns a cached, immutable bitmap. Callers may retain it across writes
+// and Close, but must copy it before modifying its pixels. Unchanged frames may
+// return the same pointer.
 func (r *Renderer) Frame() (*image.RGBA, error) { return r.FrameAt(time.Now()) }
 
 // BlinkHalfPeriod is how long a blinking cursor stays on, and then off.
@@ -331,6 +349,8 @@ func (r *Renderer) FrameAfter(offset time.Duration) (*image.RGBA, error) {
 	return r.FrameAt(r.blinkStart.Add(offset))
 }
 
+// FrameAt returns the current screen using now for cursor blink timing. It has
+// the same image ownership rules as Frame. Use FrameAfter for a relative clock.
 func (r *Renderer) FrameAt(now time.Time) (*image.RGBA, error) {
 	blinkOn := now.Sub(r.blinkStart)/BlinkHalfPeriod%2 == 0
 	if r.frame != nil && (!r.frameBlinks || r.frameBlinkOn == blinkOn) {

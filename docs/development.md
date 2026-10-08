@@ -83,7 +83,7 @@ task demo:language
 
 `task` alone runs `task build`, and `task list` shows everything. Arguments after `--` go to the program, for example `task test -- -run TestPNGFixture -v`. Builds use `-mod=readonly` and Go's cache, so changes to the native compiler settings are noticed.
 
-`task ci` runs the same checks as GitHub Actions: formatting, module tidy and verify, race tests, vet, and build. The workflow starts with no `.deps/`, then runs `task build`, `task ci`, `task demos`, and `task demo:video` on macOS and Linux, and finally checks that `task clean` followed by a rebuild works. It installs FFmpeg, sets `NTRECORD_REQUIRE_FFMPEG=1` so video tests cannot be skipped, and uploads the demo GIFs, MP4s, WebMs, and the language screenshot and text. The Makefile just calls Task.
+`task ci` runs the same checks as GitHub Actions: formatting, module tidy and verify, race tests, external-module library tests, vet, and build. The workflow starts with no `.deps/`, then runs `task build`, `task ci`, `task demos`, and `task demo:video` on macOS and Linux, and finally checks that `task clean` followed by a rebuild works. It installs FFmpeg, sets `NTRECORD_REQUIRE_FFMPEG=1` so video tests cannot be skipped, and uploads the demo GIFs, MP4s, WebMs, and the language screenshot and text. The Makefile just calls Task.
 
 What the tests cover:
 
@@ -94,7 +94,7 @@ What the tests cover:
 
 ## Deterministic rendering
 
-With system fallback disabled (`NTRECORD_FONT_PATH=`), a frame is a pure function of the terminal state and the embedded fonts, so the same state must draw the same pixels on macOS and Linux, amd64 and arm64. `internal/render/golden_frames_test.go` checks this. It draws 15 scenarios (text styles, box drawing, themes and window decoration, fractional and 96 px fonts, shaped Unicode clusters, color emoji, spaced cell graphics, cursors, Kitty images and placeholders) and compares each frame's SHA-256 with `testdata/golden/frames.sha256`. The `golden` CI job runs it on four platforms, so all four must produce the committed hashes.
+With system fallback disabled (`NTRECORD_FONT_PATH=`), a frame is a pure function of the terminal state and the embedded fonts, so the same state must draw the same pixels on macOS and Linux, amd64 and arm64. `render/golden_frames_test.go` checks this. It draws 15 scenarios (text styles, box drawing, themes and window decoration, fractional and 96 px fonts, shaped Unicode clusters, color emoji, spaced cell graphics, cursors, Kitty images and placeholders) and compares each frame's SHA-256 with `testdata/golden/frames.sha256`. The `golden` CI job runs it on four platforms, so all four must produce the committed hashes.
 
 ```sh
 task test:golden                                   # check the hashes
@@ -113,7 +113,7 @@ Deterministic recording (`-mode deterministic`) has its own tests in `internal/r
 
 `internal/boundaries` is a test that fails when a package imports more than its rule in `boundaries_test.go` allows. It keeps three seams narrow:
 
-- libghostty, and so cgo, is reached only through `internal/render`;
+- libghostty, and so cgo, is reached only through `render`;
 - `os/exec` is used only by the packages that own an external program: `encode` for FFmpeg, `record` for the recorded program, and `doctor`;
 - the leaf packages (`theme`, `gifencode`, `terminfo`) import nothing else from this module.
 
@@ -151,7 +151,7 @@ Set the same repository secrets as gloss before publishing:
 
 ## Asciicast
 
-`internal/asciicast` is a standard-library-only streaming v2/v3 reader and v3
+`asciicast` is a standard-library-only streaming v2/v3 reader and v3
 writer. `internal/record` connects it to the PTY event stream and owns atomic
 publication. Casts are event outputs alongside the frame encoders, not pixel
 encoders. `RenderCast` reuses the renderer and encoders without starting a PTY.
@@ -240,7 +240,7 @@ FFmpeg composition tests, reproduction commands, and measured tradeoffs.
 
 ## Unicode renderer checks
 
-`internal/render/unicode_test.go` covers grapheme widths, split UTF-8 writes,
+`render/unicode_test.go` covers grapheme widths, split UTF-8 writes,
 wrapping and erasure, emoji sequence substitution and presentation selectors,
 font fallback (including broken candidates), procedural graphics, and cache/font
 source limits. Installed CJK coverage is an optional macOS test; portable golden

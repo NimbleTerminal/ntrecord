@@ -12,8 +12,6 @@ import (
 	"sort"
 	"strings"
 	"testing"
-
-	"nimbleterminal.dev/ntrecord/internal/tape"
 )
 
 // Golden frames pin what the renderer draws, bit for bit, on every platform CI
@@ -21,15 +19,15 @@ import (
 // terminal state, the embedded font, and integer-and-float pixel math; if any
 // platform drifts by even one alpha step, its hash differs and the build fails.
 //
-//	NTRECORD_UPDATE_GOLDEN=1 go test ./internal/render -run Golden   rewrite the hashes
-//	NTRECORD_GOLDEN_DUMP=dir go test ./internal/render -run Golden   also write PNGs
+//	NTRECORD_UPDATE_GOLDEN=1 go test ./render -run Golden   rewrite the hashes
+//	NTRECORD_GOLDEN_DUMP=dir go test ./render -run Golden   also write PNGs
 //
 // Review the PNGs before committing an update: a changed hash is a changed picture.
 const goldenFile = "testdata/golden/frames.sha256"
 
 type scenario struct {
 	name   string
-	config func(*tape.Config)
+	config func(*Config)
 	input  func(t *testing.T) string
 }
 
@@ -49,7 +47,7 @@ func sgrRamp() string {
 
 var scenarios = []scenario{
 	{"unicode-clusters", nil, text("NFC: é ä ñ  ♞ ⌘\r\n😀 👍🏽 👨‍👩‍👧‍👦 🇯🇵 1️⃣ ❤️ 👩🏽‍💻 END\r\nText: ❤︎  Emoji: ❤️\r\n\x1b[1;3mStyled: é ♞\x1b[0m")},
-	{"unicode-spacing", func(c *tape.Config) { c.FontSize, c.LineHeight, c.LetterSpacing = 14.5, 1.4, 2 }, text("┌──┬──┐ ╔══╦══╗ ╭──╮\r\n│  │  │ ║  ║  ║ │  │\r\n└──┴──┘ ╚══╩══╝ ╰──╯\r\n⣿⢕⡪ ▁▂▃▄▅▆▇█ 😀👍🏽👩🏽‍💻")},
+	{"unicode-spacing", func(c *Config) { c.FontSize, c.LineHeight, c.LetterSpacing = 14.5, 1.4, 2 }, text("┌──┬──┐ ╔══╦══╗ ╭──╮\r\n│  │  │ ║  ║  ║ │  │\r\n└──┴──┘ ╚══╩══╝ ╰──╯\r\n⣿⢕⡪ ▁▂▃▄▅▆▇█ 😀👍🏽👩🏽‍💻")},
 	{"text-styles", nil, text("plain \x1b[1mbold\x1b[0m \x1b[3mitalic\x1b[0m \x1b[1;3mbold-italic\x1b[0m\r\n" +
 		"\x1b[4munderline\x1b[0m \x1b[9mstrike\x1b[0m \x1b[2mfaint\x1b[0m \x1b[7minverse\x1b[0m\r\n" +
 		"\x1b[31mred\x1b[32m green\x1b[33m yellow\x1b[34m blue\x1b[35m magenta\x1b[36m cyan\x1b[0m\r\n" +
@@ -58,18 +56,18 @@ var scenarios = []scenario{
 	{"box-blocks-braille-wide", nil, text("┌──┬──┐ ╔══╦══╗ ╭──╮\r\n│  │  │ ║  ║  ║ │  │\r\n└──┴──┘ ╚══╩══╝ ╰──╯\r\n" +
 		"▀▄█▌▐ ░▒▓ ▁▂▃▄▅▆▇█ ⠁⠃⠇⡇⣿⢕⡪\r\n日本語 한국어 中文 combining: é ä ñ\r\n" +
 		"fallbacks:   ☃ éè üñ ΔΣ ЖЩ\r\n")},
-	{"window-decorations", func(c *tape.Config) {
+	{"window-decorations", func(c *Config) {
 		c.Theme, c.Padding, c.Margin, c.MarginFill = "Dracula", 12, 16, "#44475a"
 		c.WindowBar, c.WindowBarSize, c.BorderRadius = "colorful", 30, 10
 	}, text("$ echo themed\r\nthemed\r\n\x1b[31mred\x1b[32m green\x1b[34m blue\x1b[0m\r\n$ ")},
-	{"window-rings-right", func(c *tape.Config) {
+	{"window-rings-right", func(c *Config) {
 		c.Theme, c.Margin, c.WindowBar, c.WindowBarSize, c.BorderRadius = "Catppuccin Mocha", 20, "ringsright", 36, 14
 	}, text("$ ls\r\nREADME.md  main.go\r\n$ ")},
-	{"font-size-fractional", func(c *tape.Config) { c.FontSize, c.Cols, c.Rows = 14.5, 40, 4 }, text("Hinting at 14.5px: iIlL1| oO0 gqy\r\n\x1b[1mBold\x1b[0m \x1b[3mItalic\x1b[0m\r\n")},
-	{"font-size-large", func(c *tape.Config) { c.FontSize, c.Cols, c.Rows = 31, 24, 3 }, text("Large 31px rWgj\r\n\x1b[1;3mBold italic\x1b[0m\r\n")},
+	{"font-size-fractional", func(c *Config) { c.FontSize, c.Cols, c.Rows = 14.5, 40, 4 }, text("Hinting at 14.5px: iIlL1| oO0 gqy\r\n\x1b[1mBold\x1b[0m \x1b[3mItalic\x1b[0m\r\n")},
+	{"font-size-large", func(c *Config) { c.FontSize, c.Cols, c.Rows = 31, 24, 3 }, text("Large 31px rWgj\r\n\x1b[1;3mBold italic\x1b[0m\r\n")},
 	// 96px is the largest size; curve-flattening drift grows with glyph size.
-	{"font-size-max", func(c *tape.Config) { c.FontSize, c.Cols, c.Rows = 96, 8, 2 }, text("Og&@\r\n\x1b[1;3mRgQ8\x1b[0m")},
-	{"spacing", func(c *tape.Config) { c.LineHeight, c.LetterSpacing, c.Cols, c.Rows = 1.4, 2, 30, 4 }, text("line height 1.4 spacing 2\r\nsecond line\r\n")},
+	{"font-size-max", func(c *Config) { c.FontSize, c.Cols, c.Rows = 96, 8, 2 }, text("Og&@\r\n\x1b[1;3mRgQ8\x1b[0m")},
+	{"spacing", func(c *Config) { c.LineHeight, c.LetterSpacing, c.Cols, c.Rows = 1.4, 2, 30, 4 }, text("line height 1.4 spacing 2\r\nsecond line\r\n")},
 	{"cursor-block", nil, text("$ cursor\x1b[2 q")},
 	{"cursor-bar", nil, text("$ cursor\x1b[6 q")},
 	{"cursor-underline", nil, text("$ cursor\x1b[4 q")},
@@ -97,7 +95,7 @@ func frameHash(f *image.RGBA) string {
 
 func renderScenario(t *testing.T, s scenario) *image.RGBA {
 	t.Helper()
-	c := tape.DefaultConfig()
+	c := DefaultConfig()
 	c.Cols, c.Rows = 40, 12
 	if s.config != nil {
 		s.config(&c)

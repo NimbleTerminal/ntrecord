@@ -11,8 +11,8 @@ import (
 	"time"
 
 	"nimbleterminal.dev/ntrecord/internal/encode"
-	"nimbleterminal.dev/ntrecord/internal/render"
 	"nimbleterminal.dev/ntrecord/internal/tape"
+	"nimbleterminal.dev/ntrecord/render"
 )
 
 type outputs struct {

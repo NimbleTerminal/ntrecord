@@ -8,7 +8,7 @@ The built-in text font is **Go Mono** in regular, bold, italic, and bold italic.
 **Noto Sans Symbols 2** and **Noto Color Emoji** are bundled as fallbacks, so emoji,
 box drawing, and braille need no font installation. Go Mono's license is in
 [FONT-LICENSE](../FONT-LICENSE); Noto licenses, pinned sources, and hashes are in
-the [font manifest](../internal/render/fonts/README.md) and release archives.
+the [font manifest](../render/fonts/README.md) and release archives.
 
 `Set FontFamily` (or `-font`) selects an installed family or a `.ttf`, `.otf`, or
 `.ttc` file. A collection path selects its first face. Missing text falls back to

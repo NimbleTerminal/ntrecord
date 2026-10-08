@@ -18,7 +18,7 @@ import (
 	"strings"
 	"time"
 
-	"nimbleterminal.dev/ntrecord/internal/gifencode"
+	"nimbleterminal.dev/ntrecord/gifencode"
 )
 
 func main() {

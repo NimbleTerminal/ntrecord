@@ -13,9 +13,9 @@ import (
 
 	"github.com/creack/pty"
 	"nimbleterminal.dev/ntrecord/internal/encode"
-	"nimbleterminal.dev/ntrecord/internal/render"
 	"nimbleterminal.dev/ntrecord/internal/tape"
 	"nimbleterminal.dev/ntrecord/internal/terminfo"
+	"nimbleterminal.dev/ntrecord/render"
 )
 
 // Options configure a run. The zero value checks the defaults.
@@ -96,7 +96,7 @@ func checkEngine() result {
 }
 
 func checkRenderer() result {
-	c := tape.DefaultConfig()
+	c := render.DefaultConfig()
 	r, err := render.New(c)
 	if err != nil {
 		return result{"renderer", fail, err.Error()}

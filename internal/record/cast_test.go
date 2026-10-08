@@ -13,7 +13,7 @@ import (
 	"testing"
 	"time"
 
-	"nimbleterminal.dev/ntrecord/internal/asciicast"
+	"nimbleterminal.dev/ntrecord/asciicast"
 	"nimbleterminal.dev/ntrecord/internal/tape"
 )
 
@@ -26,7 +26,7 @@ func TestCastPTYKittyRoundTrip(t *testing.T) {
 	t.Setenv("NTRECORD_PRIVATE_TEST", "must-not-be-metadata")
 	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 	defer cancel()
-	err := Run(ctx, Options{Config: c, Command: []string{"/bin/sh", "-c", `printf '\033[?25l'; cat "$1"; printf '\033[2;1HHELLO 👍🏽'; sleep 0.15; exit 7`, "cast-test", "../render/testdata/kitty.apc"}})
+	err := Run(ctx, Options{Config: c, Command: []string{"/bin/sh", "-c", `printf '\033[?25l'; cat "$1"; printf '\033[2;1HHELLO 👍🏽'; sleep 0.15; exit 7`, "cast-test", "../../render/testdata/kitty.apc"}})
 	if err == nil || !strings.Contains(err.Error(), "exit status 7") {
 		t.Fatalf("lost exit failure: %v", err)
 	}

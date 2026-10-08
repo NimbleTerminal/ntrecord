@@ -11,13 +11,11 @@ import (
 	"strings"
 	"testing"
 	"time"
-
-	"nimbleterminal.dev/ntrecord/internal/tape"
 )
 
 func newRenderer(t *testing.T) *Renderer {
 	t.Helper()
-	c := tape.DefaultConfig()
+	c := DefaultConfig()
 	c.Cols = 20
 	c.Rows = 10
 	r, err := New(c)

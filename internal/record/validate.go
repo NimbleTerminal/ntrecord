@@ -6,8 +6,9 @@ import (
 	"os"
 
 	"nimbleterminal.dev/ntrecord/internal/encode"
-	"nimbleterminal.dev/ntrecord/internal/render"
+	"nimbleterminal.dev/ntrecord/internal/renderconfig"
 	"nimbleterminal.dev/ntrecord/internal/tape"
+	"nimbleterminal.dev/ntrecord/render"
 )
 
 // Summary is what a tape would record, found without starting a PTY.
@@ -27,7 +28,7 @@ func Validate(t *tape.Tape) (Summary, error) {
 	s := Summary{Commands: len(t.Actions), Outputs: c.Destinations()}
 	var errs []error
 	errs = append(errs, validateCast(c, t))
-	if r, err := render.New(c); err != nil {
+	if r, err := render.New(renderconfig.FromTape(c)); err != nil {
 		errs = append(errs, err)
 	} else {
 		s.Cols, s.Rows = r.Cols, r.Rows
