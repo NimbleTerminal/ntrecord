@@ -38,7 +38,7 @@ The file extension picks the format, for both a tape's `Output` and `record -o`.
 | Extension | Result | Needs |
 | --- | --- | --- |
 | `.cast` | Asciicast v3 terminal events, including inline Kitty graphics | None beyond sigmamax |
-| `.gif` | Animated GIF (256 colors, with the theme's own colors kept exact) | nothing |
+| `.gif` | Animated GIF (up to 256 colors, one adaptive palette, exact theme colors) | nothing |
 | `.mp4` | H.264 video (`libx264`, CRF 18, fast-start) | FFmpeg |
 | `.webm` | VP9 video (`libvpx-vp9`, CRF 30) | FFmpeg |
 | `.txt`, `.ascii`, `.test` | The screen's text at each step | nothing |
@@ -158,7 +158,7 @@ sigmamax record -o command.gif -- sh -c 'printf "hello\n"; sleep 2'
 
 The recorded window keeps the size you asked for. Limits and failure behavior:
 
-- GIF keeps each distinct frame in memory, up to 512 MiB, so keep GIF recordings fairly short. Video is streamed to FFmpeg and does not accumulate.
+- GIF retains compressed source frames to build one stable palette for the whole recording. Its 512 MiB working-set budget includes sources, indexed frames, palettes and temporary buffers; long or noisy recordings can reach it sooner than simple terminal sessions. Video is streamed to FFmpeg and does not accumulate. See [GIF encoding and benchmarks](docs/gif-encoding.md) for details.
 - The window is limited to 8192 pixels per side and 16 megapixels.
 - If the program fails, or output cannot be forwarded (a closed stdout pipe, for example), sigmamax tries to save every output first and then returns the error.
 - FFmpeg writes have a 30-second deadline and are interrupted on cancellation. A video stream that fails or is cut off cannot always be saved. Other formats finish independently, and an existing file is replaced only after a successful encode.

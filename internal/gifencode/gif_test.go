@@ -98,7 +98,7 @@ func TestSeededColorsAreExactAndFlat(t *testing.T) {
 	}
 }
 
-func TestSeedKeepsBlackWhiteAndFullPalette(t *testing.T) {
+func TestSeedKeepsBlackWhiteAndThemeColors(t *testing.T) {
 	var seed color.Palette
 	for i := 0; i < 20; i++ {
 		seed = append(seed, color.RGBA{uint8(i*12 + 1), uint8(i*7 + 3), uint8(255 - i*11), 255})
@@ -113,8 +113,8 @@ func TestSeedKeepsBlackWhiteAndFullPalette(t *testing.T) {
 		t.Fatal(err)
 	}
 	g := encodeDecode(t, &e)
-	if n := len(g.Image[0].Palette); n != 256 {
-		t.Errorf("palette has %d entries, want 256", n)
+	if n := len(g.Image[0].Palette); n > 256 || n < len(want) {
+		t.Errorf("palette has %d entries for %d distinct colors", n, len(want))
 	}
 	for x, c := range want {
 		if got := color.RGBAModel.Convert(g.Image[0].At(x, 0)); got != c {

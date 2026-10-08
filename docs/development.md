@@ -189,3 +189,9 @@ the CLI: macOS requires `select` here because `poll` only works on the PTY slave
 Release archive smoke tests run on macOS and Linux, on both CPU architectures.
 They exercise the extracted binary without native build tools, checking text
 and Kitty image pixels in direct GIF recordings and in cast-to-GIF round trips.
+
+GIF encoding uses a recording-wide adaptive palette, exact theme/flat colors,
+and changed-region patches. Sources are compressed in memory until finalization;
+palette construction and temporary buffers count toward its resource budget.
+[GIF encoding and benchmarks](gif-encoding.md) describes the algorithm, independent
+FFmpeg composition tests, reproduction commands, and measured tradeoffs.
