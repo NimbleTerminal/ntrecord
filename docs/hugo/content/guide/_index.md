@@ -10,6 +10,7 @@ How to install sigmamax, make a recording, script it, and get the result you wan
 - [Your first recording](first-recording/)
 - [Writing tapes](tapes/)
 - [How it looks](appearance/)
+- [Using your own font](fonts/)
 - [Output formats](formats/)
 - [Recording images](kitty/)
 - [When something goes wrong](troubleshooting/)
