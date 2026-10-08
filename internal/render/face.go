@@ -70,6 +70,13 @@ func (f *face) Glyph(dot fixed.Point26_6, r rune) (dr image.Rectangle, mask imag
 	if err != nil {
 		return image.Rectangle{}, nil, image.Point{}, 0, false
 	}
+	return f.GlyphIndex(dot, x)
+}
+
+// GlyphIndex rasterizes the glyph selected by the shaping engine, retaining
+// this renderer's deterministic outline flattening and hinting.
+func (f *face) GlyphIndex(dot fixed.Point26_6, x sfnt.GlyphIndex) (dr image.Rectangle, mask image.Image, maskp image.Point, advance fixed.Int26_6, ok bool) {
+	var err error
 	// The advance comes first: LoadGlyph's segments are invalid once buf is reused.
 	if advance, err = f.f.GlyphAdvance(&f.buf, x, f.scale, f.hinting); err != nil {
 		return image.Rectangle{}, nil, image.Point{}, 0, false

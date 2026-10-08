@@ -4,16 +4,78 @@ Terminal parsing is left entirely to [libghostty](https://github.com/ghostty-org
 
 ## Fonts and text
 
-The built-in font is **Go Mono** in regular, bold, italic, and bold italic, from `golang.org/x/image/font/gofont`. Its license is in [FONT-LICENSE](../FONT-LICENSE). `Set FontFamily` selects an installed font or a `.ttf`/`.otf` file instead.
+The built-in text font is **Go Mono** in regular, bold, italic, and bold italic.
+**Noto Sans Symbols 2** and **Noto Color Emoji** are bundled as fallbacks, so emoji,
+box drawing, and braille need no font installation. Go Mono's license is in
+[FONT-LICENSE](../FONT-LICENSE); Noto licenses, pinned sources, and hashes are in
+the [font manifest](../internal/render/fonts/README.md) and release archives.
 
-Glyphs are parsed with `sfnt` and drawn by sigmamax's own `face` (`internal/render/face.go`). It is the `opentype` face from `golang.org/x/image` with one change, so that frames come out identical on arm64 and amd64; see [Deterministic rendering](development.md#deterministic-rendering). A bounded cache holds each rendered glyph per `(rune, foreground, bold, italic)`.
+`Set FontFamily` (or `-font`) selects an installed family or a `.ttf`, `.otf`, or
+`.ttc` file. A collection path selects its first face. Missing text falls back to
+Noto Symbols, then installed fonts covering the entire grapheme cluster, preferring
+matching weight and italic style. CJK and other scripts need a suitable installed
+outline font. Missing clusters use a replacement mark. Installed font coverage
+can differ between machines.
 
-Limits:
+System fallback searches the standard macOS/Linux font directories, including
+user font directories and `$XDG_DATA_HOME/fonts`. `SIGMAMAX_FONT_PATH` replaces
+those **fallback** roots with a platform-separated list of directories or font
+files. Set it to an empty string for reproducible bundled-only rendering. It does
+not change named primary-font lookup.
 
-- There is no ligature support, text shaping, font fallback, or color emoji. Combining marks are drawn at the cell's origin.
-- Without fallback, a character the font lacks is drawn as a replacement mark. Go Mono has no braille patterns, rounded box corners (`╭`), or CJK text. Choose a font that covers what your program prints.
+Box drawing (U+2500–257F), block elements (U+2580–259F), and braille (U+2800–28FF)
+are drawn geometrically at the actual cell size, including letter and line
+spacing. Borders reach adjacent cells; full blocks have no font-bearing gaps.
+Light/heavy/double lines, mixed junctions, dashes, rounded corners, diagonal lines,
+quadrants, shades, and all eight braille dots are supported. Very small cells
+necessarily reduce line and dot detail.
+
+The renderer shapes each terminal grapheme cluster with the pure-Go
+`go-text/typesetting` OpenType shaper and normalizes text to NFC. Combining marks,
+emoji skin tones, ZWJ sequences, flags, keycaps, and variation selectors are kept
+together. Ghostty controls the grid width; shaped text cannot advance neighboring
+cells. Grapheme-cluster mode (2027) defaults on. New `.cast` recordings begin with
+its enable sequence for compatible viewers; applications can explicitly disable
+it with `CSI ? 2027 l`. Older casts replay with this default too, unless they
+specify their width mode, so legacy emoji spacing may change.
+
+Emoji presentation uses the bundled color font; VS15 requests monochrome text
+and VS16 requests emoji. The color bitmap keeps its aspect ratio inside its
+terminal cells. Unsupported emoji sequences fall back to a replacement rather
+than drawing overlapping component images. PNG and video preserve these colors;
+GIF output still has the palette tradeoffs described in [GIF encoding](gif-encoding.md).
+
+Ordinary single-cell primary-font glyphs retain the existing deterministic
+rasterizer. Cluster and glyph image caches each retain at most 32 MiB of pixel
+data, with entry limits of 4,096 and 8,192 respectively. Shaping is limited to 256
+runes per cluster. System fallback discovery considers at most 1,024 files and
+2,048 faces, with 32 MiB of accepted cmap source tables; individual font files
+are limited to 64 MiB. At most 16 system faces are attempted per renderer, with
+128 MiB of cumulative source bytes. Parsed font tables, temporary masks, and the
+embedded fonts consume additional memory: these limits are not a total RSS cap.
+Fonts are discovered and loaded lazily, then reused.
+
+Remaining limits:
+
+- Shaping stays within each terminal cluster. There are no cross-cell programming
+  ligatures, paragraph bidi layout, or contextual shaping across separate cells.
+- Installed fallback supports outline fonts. Color rendering uses the bundled
+  Noto PNG bitmap font; arbitrary COLR/SVG fonts and platform emoji APIs are not
+  supported. Emoji coverage follows the pinned font version.
 - Text underlines, in every style, are drawn as a simple line.
 - The cursor can be a block, bar, or underline, and can blink.
+
+Try the bundled Unicode showcase from the repository root:
+
+```sh
+task build
+bin/sigmamax examples/unicode.tape
+bin/sigmamax play examples/unicode.cast
+```
+
+This produces GIF, PNG, and cast outputs showing accents, symbols, cell graphics,
+and color emoji. The terminal player uses the same renderer and requires Kitty
+image support in the host terminal.
 
 ## Kitty graphics
 

@@ -48,6 +48,8 @@ func sgrRamp() string {
 }
 
 var scenarios = []scenario{
+	{"unicode-clusters", nil, text("NFC: é ä ñ  ♞ ⌘\r\n😀 👍🏽 👨‍👩‍👧‍👦 🇯🇵 1️⃣ ❤️ 👩🏽‍💻 END\r\nText: ❤︎  Emoji: ❤️\r\n\x1b[1;3mStyled: é ♞\x1b[0m")},
+	{"unicode-spacing", func(c *tape.Config) { c.FontSize, c.LineHeight, c.LetterSpacing = 14.5, 1.4, 2 }, text("┌──┬──┐ ╔══╦══╗ ╭──╮\r\n│  │  │ ║  ║  ║ │  │\r\n└──┴──┘ ╚══╩══╝ ╰──╯\r\n⣿⢕⡪ ▁▂▃▄▅▆▇█ 😀👍🏽👩🏽‍💻")},
 	{"text-styles", nil, text("plain \x1b[1mbold\x1b[0m \x1b[3mitalic\x1b[0m \x1b[1;3mbold-italic\x1b[0m\r\n" +
 		"\x1b[4munderline\x1b[0m \x1b[9mstrike\x1b[0m \x1b[2mfaint\x1b[0m \x1b[7minverse\x1b[0m\r\n" +
 		"\x1b[31mred\x1b[32m green\x1b[33m yellow\x1b[34m blue\x1b[35m magenta\x1b[36m cyan\x1b[0m\r\n" +
@@ -160,6 +162,7 @@ func readGolden(t *testing.T) map[string]string {
 }
 
 func TestGoldenFrames(t *testing.T) {
+	t.Setenv("SIGMAMAX_FONT_PATH", "")
 	update := os.Getenv("SIGMAMAX_UPDATE_GOLDEN") == "1"
 	dump := os.Getenv("SIGMAMAX_GOLDEN_DUMP")
 	want := readGolden(t)

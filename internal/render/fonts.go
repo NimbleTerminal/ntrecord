@@ -14,29 +14,39 @@ import (
 	"golang.org/x/image/font/sfnt"
 )
 
-func fontFaces(family string) ([4]*sfnt.Font, error) {
-	var faces [4]*sfnt.Font
+type fontSource struct {
+	font  *sfnt.Font
+	data  []byte
+	index int
+}
+
+func fontFaces(family string) ([4]*fontSource, error) {
+	var faces [4]*fontSource
 	if family == "" || strings.EqualFold(family, "Go Mono") || strings.EqualFold(family, "monospace") {
 		for i, b := range [][]byte{gomono.TTF, gomonobold.TTF, gomonoitalic.TTF, gomonobolditalic.TTF} {
 			f, e := sfnt.Parse(b)
 			if e != nil {
 				return faces, e
 			}
-			faces[i] = f
+			faces[i] = &fontSource{f, b, 0}
 		}
 		return faces, nil
 	}
-	if strings.ContainsAny(family, "/\\") || strings.HasSuffix(strings.ToLower(family), ".ttf") || strings.HasSuffix(strings.ToLower(family), ".otf") {
-		b, e := os.ReadFile(family)
+	if strings.ContainsAny(family, "/\\") || strings.HasSuffix(strings.ToLower(family), ".ttf") || strings.HasSuffix(strings.ToLower(family), ".otf") || strings.HasSuffix(strings.ToLower(family), ".ttc") {
+		b, e := readFont(family, 64<<20)
 		if e != nil {
 			return faces, e
 		}
-		f, e := sfnt.Parse(b)
+		collection, e := sfnt.ParseCollection(b)
+		if e != nil {
+			return faces, e
+		}
+		f, e := collection.Font(0)
 		if e != nil {
 			return faces, e
 		}
 		for i := range faces {
-			faces[i] = f
+			faces[i] = &fontSource{f, b, 0}
 		}
 		return faces, nil
 	}
@@ -87,7 +97,7 @@ func fontFaces(family string) ([4]*sfnt.Font, error) {
 					i += 2
 				}
 				if faces[i] == nil {
-					faces[i] = f
+					faces[i] = &fontSource{f, b, n}
 				}
 			}
 			return nil

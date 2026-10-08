@@ -39,6 +39,11 @@ func newCastOutput(path string, r *render.Renderer) (*castOutput, error) {
 		c.abort()
 		return nil, err
 	}
+	// Record the initial width convention for other mode-2027-aware viewers.
+	if err = c.writer.Output(0, []byte("\x1b[?2027h")); err != nil {
+		c.abort()
+		return nil, err
+	}
 	return c, nil
 }
 

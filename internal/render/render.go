@@ -124,7 +124,7 @@ func New(c tape.Config) (_ *Renderer, err error) {
 	if r.outputWidth > 8192 || r.outputHeight > 8192 || r.outputWidth*r.outputHeight > 16*1024*1024 {
 		return nil, fmt.Errorf("viewport must contain at least one cell, be <=8192 pixels per side and <=16 megapixels")
 	}
-	r.term, err = vt.NewTerminal(vt.WithSize(uint16(r.Cols), uint16(r.Rows)),
+	r.term, err = vt.NewTerminal(vt.WithSize(uint16(r.Cols), uint16(r.Rows)), vt.WithModeDefault(vt.ModeGraphemeCluster, true),
 		vt.WithRenderHold(func(_ *vt.Terminal, held bool) {
 			if held {
 				now := r.writeTime
@@ -310,6 +310,7 @@ func sortPlacements(placements []placement) {
 func rgb(c vt.ColorRGB) color.RGBA { return color.RGBA{c.R, c.G, c.B, 255} }
 
 type cell struct {
+	span             int
 	x, y             int
 	text             []uint32
 	style            vt.RenderCellStyle
@@ -356,6 +357,21 @@ func (r *Renderer) FrameAt(now time.Time) (*image.RGBA, error) {
 			c := cell{x: x * r.CellWidth, y: y * r.CellHeight, fg: rgb(colors.Foreground), bg: rgb(colors.Background)}
 			if err := r.cells.StyleInto(&c.style); err != nil {
 				return nil, err
+			}
+			c.span = 1
+			raw, rawErr := r.cells.Raw()
+			if rawErr != nil {
+				return nil, rawErr
+			}
+			wide, wideErr := raw.Wide()
+			if wideErr != nil {
+				return nil, wideErr
+			}
+			switch wide {
+			case vt.CellWideWide:
+				c.span = 2
+			case vt.CellWideSpacerHead, vt.CellWideSpacerTail:
+				c.span = 0
 			}
 			c.text, err = r.cells.Graphemes()
 			if err != nil {
@@ -404,12 +420,18 @@ func (r *Renderer) FrameAt(now time.Time) (*image.RGBA, error) {
 		if c.invisible || c.placeholder != nil {
 			continue
 		}
-		for _, cp := range c.text {
-			if cp == 0 || cp == ' ' {
-				continue
+		if c.span > 0 && len(c.text) > 0 && c.text[0] != 0 {
+			runes := make([]rune, 0, min(len(c.text), maxClusterRunes+1))
+			for _, cp := range c.text {
+				runes = append(runes, rune(cp))
+				if len(runes) > maxClusterRunes {
+					break
+				}
 			}
-			g := r.atlas.glyph(glyphKey{rune(cp), c.fg, c.style.Bold, c.style.Italic})
-			draw.Draw(dst, g.Bounds().Add(image.Pt(c.x, c.y)), g, g.Bounds().Min, draw.Over)
+			g := r.atlas.cluster(clusterKey{string(runes), c.fg, c.style.Bold, c.style.Italic, c.span, r.CellWidth, r.CellHeight})
+			if g != nil {
+				draw.Draw(dst, g.Bounds().Add(image.Pt(c.x, c.y)), g, g.Bounds().Min, draw.Over)
+			}
 		}
 		if c.style.Underline {
 			draw.Draw(dst, image.Rect(c.x, c.y+r.atlas.ascent+1, c.x+r.CellWidth, c.y+r.atlas.ascent+2), image.NewUniform(c.fg), image.Point{}, draw.Src)

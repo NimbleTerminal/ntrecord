@@ -94,7 +94,7 @@ What the tests cover:
 
 ## Deterministic rendering
 
-A frame is a pure function of the terminal state and the embedded font, so the same state must draw the same pixels on macOS and Linux, amd64 and arm64. `internal/render/golden_frames_test.go` checks this. It draws 13 scenarios (text styles, box drawing, themes and window decoration, fractional and 96 px fonts, cursors, Kitty images and placeholders) and compares each frame's SHA-256 with `testdata/golden/frames.sha256`. The `golden` CI job runs it on four platforms, so all four must produce the committed hashes.
+With system fallback disabled (`SIGMAMAX_FONT_PATH=`), a frame is a pure function of the terminal state and the embedded fonts, so the same state must draw the same pixels on macOS and Linux, amd64 and arm64. `internal/render/golden_frames_test.go` checks this. It draws 15 scenarios (text styles, box drawing, themes and window decoration, fractional and 96 px fonts, shaped Unicode clusters, color emoji, spaced cell graphics, cursors, Kitty images and placeholders) and compares each frame's SHA-256 with `testdata/golden/frames.sha256`. The `golden` CI job runs it on four platforms, so all four must produce the committed hashes.
 
 ```sh
 task test:golden                                   # check the hashes
@@ -195,3 +195,25 @@ and changed-region patches. Sources are compressed in memory until finalization;
 palette construction and temporary buffers count toward its resource budget.
 [GIF encoding and benchmarks](gif-encoding.md) describes the algorithm, independent
 FFmpeg composition tests, reproduction commands, and measured tradeoffs.
+
+## Unicode renderer checks
+
+`internal/render/unicode_test.go` covers grapheme widths, split UTF-8 writes,
+wrapping and erasure, emoji sequence substitution and presentation selectors,
+font fallback (including broken candidates), procedural graphics, and cache/font
+source limits. Installed CJK coverage is an optional macOS test; portable golden
+frames explicitly disable system fallback. The new `.cast` mode prefix is covered
+by the PTY recording round trip.
+
+For a warm-cache **redraw** benchmark (excluding the unchanged-frame shortcut):
+
+```sh
+task test -- -run '^$' -bench BenchmarkUnicodeFrame -benchmem
+```
+
+An 80×24 Unicode-heavy screen on an Apple M5 Max measured 0.458 ms/redraw,
+2.31 MB allocated/redraw, and 8,463 allocations/redraw. This is a renderer
+measurement, not an end-to-end encoding benchmark or a cold font-loading estimate.
+The Unicode showcase was recorded to GIF/PNG/cast, visually inspected, and replayed
+to PNG; the replay's final viewport matched the screenshot byte for byte. Casts
+store grid dimensions, so pixel margins outside the grid are not reproduced.

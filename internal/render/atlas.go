@@ -15,19 +15,28 @@ type glyphKey struct {
 }
 
 type atlas struct {
+	glyphBytes            int
+	sources               [4]*fontSource
+	size                  float64
+	clusters              map[clusterKey]*image.RGBA
+	clusterBytes          int
+	shaped                [4]*fallbackFont
+	symbols, emoji        *fallbackFont
+	fallbacks             fallbackCatalog
 	faces                 [4]*face
 	glyphs                map[glyphKey]*image.RGBA
 	width, height, ascent int
 }
 
 func newAtlasFamily(size float64, family string) (*atlas, error) {
-	a := &atlas{glyphs: make(map[glyphKey]*image.RGBA)}
+	a := &atlas{glyphs: make(map[glyphKey]*image.RGBA), clusters: make(map[clusterKey]*image.RGBA), size: size}
 	fonts, err := fontFaces(family)
 	if err != nil {
 		return nil, err
 	}
+	a.sources = fonts
 	for i, parsed := range fonts {
-		a.faces[i] = newFace(parsed, size)
+		a.faces[i] = newFace(parsed.font, size)
 	}
 	advance, _ := a.faces[0].GlyphAdvance('M')
 	a.width = advance.Ceil()
@@ -67,9 +76,13 @@ func (a *atlas) glyph(k glyphKey) *image.RGBA {
 		draw.DrawMask(g, r, image.NewUniform(k.fg), image.Point{}, mask, mp, draw.Src)
 	}
 	// Bound cache growth for long live sessions with arbitrary true colors.
-	if len(a.glyphs) >= 8192 {
+	if len(a.glyphs) >= 8192 || a.glyphBytes+len(g.Pix) > maxAtlasBytes {
 		clear(a.glyphs)
+		a.glyphBytes = 0
 	}
-	a.glyphs[k] = g
+	if len(g.Pix) <= maxAtlasBytes {
+		a.glyphs[k] = g
+		a.glyphBytes += len(g.Pix)
+	}
 	return g
 }

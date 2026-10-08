@@ -13,7 +13,7 @@ brew install --cask nimblemarkets/tap/sigmamax
 sigmamax --version
 ```
 
-The release is a single binary with libghostty-vt and a default font built in, so recording a GIF needs nothing else. MP4 and WebM also need `ffmpeg`:
+The release is a single binary with libghostty-vt and default text, symbol, and color emoji fonts built in, so recording a GIF needs nothing else. MP4 and WebM also need `ffmpeg`:
 
 ```sh
 brew install ffmpeg
@@ -178,4 +178,4 @@ Thank you to [Charm](https://charm.sh) for [VHS](https://github.com/charmbracele
 
 ## License
 
-[MIT](LICENSE). Bundled fonts are covered by [FONT-LICENSE](FONT-LICENSE).
+[MIT](LICENSE). Go Mono is covered by [FONT-LICENSE](FONT-LICENSE); bundled Noto fonts have [OFL notices and source information](internal/render/fonts/README.md).

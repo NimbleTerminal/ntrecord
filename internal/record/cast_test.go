@@ -26,7 +26,7 @@ func TestCastPTYKittyRoundTrip(t *testing.T) {
 	t.Setenv("SIGMAMAX_PRIVATE_TEST", "must-not-be-metadata")
 	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 	defer cancel()
-	err := Run(ctx, Options{Config: c, Command: []string{"/bin/sh", "-c", `printf '\033[?25l'; cat "$1"; printf '\033[2;1HHELLO 🐈'; sleep 0.15; exit 7`, "cast-test", "../render/testdata/kitty.apc"}})
+	err := Run(ctx, Options{Config: c, Command: []string{"/bin/sh", "-c", `printf '\033[?25l'; cat "$1"; printf '\033[2;1HHELLO 👍🏽'; sleep 0.15; exit 7`, "cast-test", "../render/testdata/kitty.apc"}})
 	if err == nil || !strings.Contains(err.Error(), "exit status 7") {
 		t.Fatalf("lost exit failure: %v", err)
 	}
@@ -59,7 +59,10 @@ func TestCastPTYKittyRoundTrip(t *testing.T) {
 		}
 		end = e.At
 	}
-	if !strings.Contains(output.String(), "HELLO 🐈") || !strings.Contains(output.String(), "\x1b_Ga=T") || end < 100*time.Millisecond {
+	if !strings.HasPrefix(output.String(), "\x1b[?2027h") {
+		t.Fatal("cast omitted initial grapheme mode")
+	}
+	if !strings.Contains(output.String(), "HELLO 👍🏽") || !strings.Contains(output.String(), "\x1b_Ga=T") || end < 100*time.Millisecond {
 		t.Fatalf("missing output or trailing time: %q %s", output.String(), end)
 	}
 	c.Outputs = nil

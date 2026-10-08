@@ -8,6 +8,7 @@ import (
 	"compress/gzip"
 	"fmt"
 	"io"
+	"io/fs"
 	"os"
 	"os/exec"
 	"path/filepath"
@@ -70,21 +71,8 @@ func run() error {
 		if dir == "" {
 			return fmt.Errorf("module %s is not downloaded; run go mod download", mod)
 		}
-		entries, err := os.ReadDir(dir)
-		if err != nil {
+		if err := copyModuleLicenses(dest, mod, dir); err != nil {
 			return err
-		}
-		found := false
-		for _, entry := range entries {
-			if !entry.IsDir() && isLicense(entry.Name()) {
-				found = true
-				if err := copyFile(strings.ReplaceAll(mod, "/", "_")+"-"+entry.Name()+".txt", filepath.Join(dir, entry.Name())); err != nil {
-					return err
-				}
-			}
-		}
-		if !found {
-			return fmt.Errorf("no license found in %s", mod)
 		}
 	}
 	if err := scan.Err(); err != nil {
@@ -104,6 +92,39 @@ func run() error {
 	}
 	return nil
 }
+
+// Modules may contain separately licensed packages (for example go-text's
+// HarfBuzz port). Root-only collection misses those required notices.
+func copyModuleLicenses(dest, mod, dir string) error {
+	found := false
+	err := filepath.WalkDir(dir, func(path string, entry fs.DirEntry, err error) error {
+		if err != nil {
+			return err
+		}
+		if entry.IsDir() || !isLicense(entry.Name()) {
+			return nil
+		}
+		data, err := os.ReadFile(path)
+		if err != nil {
+			return err
+		}
+		rel, err := filepath.Rel(dir, path)
+		if err != nil {
+			return err
+		}
+		found = true
+		name := strings.ReplaceAll(mod, "/", "_") + "-" + strings.ReplaceAll(filepath.ToSlash(rel), "/", "_") + ".txt"
+		return save(dest, name, data)
+	})
+	if err != nil {
+		return err
+	}
+	if !found {
+		return fmt.Errorf("no license found in %s", mod)
+	}
+	return nil
+}
+
 func isLicense(name string) bool {
 	name = strings.ToUpper(name)
 	return strings.HasPrefix(name, "LICENSE") || strings.HasPrefix(name, "COPYING") || name == "COPYRIGHT" || strings.HasPrefix(name, "NOTICE")
