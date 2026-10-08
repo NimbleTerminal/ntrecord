@@ -30,7 +30,7 @@ func decodeFFmpeg(t *testing.T, data []byte, loop bool, frames int) []byte {
 	t.Helper()
 	path, err := exec.LookPath("ffmpeg")
 	if err != nil {
-		if os.Getenv("SIGMAMAX_REQUIRE_FFMPEG") == "1" {
+		if os.Getenv("NTRECORD_REQUIRE_FFMPEG") == "1" {
 			t.Fatal(err)
 		}
 		t.Skip("independent GIF composition check requires ffmpeg")

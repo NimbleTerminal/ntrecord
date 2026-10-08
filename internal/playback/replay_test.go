@@ -10,8 +10,8 @@ import (
 	"testing"
 	"time"
 
-	"github.com/NimbleMarkets/sigmamax/internal/asciicast"
-	"github.com/NimbleMarkets/sigmamax/internal/tape"
+	"nimbleterminal.dev/ntrecord/internal/asciicast"
+	"nimbleterminal.dev/ntrecord/internal/tape"
 )
 
 func TestSeekReconstructsKittyState(t *testing.T) {

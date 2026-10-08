@@ -18,7 +18,7 @@ func TestPassesOnAHealthyHost(t *testing.T) {
 	if !ok {
 		t.Fatalf("healthy host reported failure:\n%s", out)
 	}
-	for _, name := range []string{"sigmamax", "engine", "renderer", "pty", "terminfo", "ffmpeg"} {
+	for _, name := range []string{"ntrecord", "engine", "renderer", "pty", "terminfo", "ffmpeg"} {
 		if !strings.Contains(out, name) {
 			t.Errorf("no %q check in:\n%s", name, out)
 		}

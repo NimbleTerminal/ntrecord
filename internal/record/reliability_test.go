@@ -13,8 +13,8 @@ import (
 	"testing"
 	"time"
 
-	"github.com/NimbleMarkets/sigmamax/internal/tape"
 	"golang.org/x/term"
+	"nimbleterminal.dev/ntrecord/internal/tape"
 )
 
 type failedOutput struct{ err error }
@@ -94,7 +94,7 @@ func TestFailedVideoStillFinalizesOtherOutputs(t *testing.T) {
 // This child fills PTY output with device queries before reading a large paste.
 // The recorder must keep reading and enqueue replies while its writer blocks.
 func TestBackpressureHelper(t *testing.T) {
-	if os.Getenv("SIGMAMAX_PRESSURE_HELPER") != "1" {
+	if os.Getenv("NTRECORD_PRESSURE_HELPER") != "1" {
 		return
 	}
 	if _, err := term.MakeRaw(int(os.Stdin.Fd())); err != nil {
@@ -130,7 +130,7 @@ func TestPasteAndRepliesDoNotDeadlock(t *testing.T) {
 	c := tape.DefaultConfig()
 	c.Cols, c.Rows = 20, 3
 	c.Output = filepath.Join(t.TempDir(), "pressure.txt")
-	c.Env = map[string]string{"SIGMAMAX_PRESSURE_HELPER": "1"}
+	c.Env = map[string]string{"NTRECORD_PRESSURE_HELPER": "1"}
 	// Wait for raw mode before pasting; canonical PTYs deliberately limit input.
 	p := &tape.Tape{Actions: []tape.Action{
 		{Command: "Wait", Scope: "Screen", Text: "READY", Duration: 5 * time.Second},

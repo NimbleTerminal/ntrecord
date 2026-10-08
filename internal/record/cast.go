@@ -8,10 +8,10 @@ import (
 	"strings"
 	"time"
 
-	"github.com/NimbleMarkets/sigmamax/internal/asciicast"
-	"github.com/NimbleMarkets/sigmamax/internal/encode"
-	"github.com/NimbleMarkets/sigmamax/internal/render"
-	"github.com/NimbleMarkets/sigmamax/internal/tape"
+	"nimbleterminal.dev/ntrecord/internal/asciicast"
+	"nimbleterminal.dev/ntrecord/internal/encode"
+	"nimbleterminal.dev/ntrecord/internal/render"
+	"nimbleterminal.dev/ntrecord/internal/tape"
 )
 
 type castOutput struct {
@@ -29,7 +29,7 @@ func newCastOutput(path string, r *render.Renderer) (*castOutput, error) {
 	if err = os.MkdirAll(filepath.Dir(path), 0755); err != nil {
 		return nil, err
 	}
-	f, err := os.CreateTemp(filepath.Dir(path), ".sigmamax-*.cast")
+	f, err := os.CreateTemp(filepath.Dir(path), ".ntrecord-*.cast")
 	if err != nil {
 		return nil, err
 	}

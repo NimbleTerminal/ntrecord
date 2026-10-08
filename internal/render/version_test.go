@@ -4,11 +4,11 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/NimbleMarkets/sigmamax/internal/tape"
+	"nimbleterminal.dev/ntrecord/internal/tape"
 )
 
 func TestXtversionReportsConfiguredVersion(t *testing.T) {
-	for version, want := range map[string]string{"v1.2.3": "sigmamax 1.2.3", "": "sigmamax dev"} {
+	for version, want := range map[string]string{"v1.2.3": "ntrecord 1.2.3", "": "ntrecord dev"} {
 		c := tape.DefaultConfig()
 		c.Version = version
 		r, err := New(c)

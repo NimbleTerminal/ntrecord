@@ -13,7 +13,7 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/NimbleMarkets/sigmamax/internal/tape"
+	"nimbleterminal.dev/ntrecord/internal/tape"
 )
 
 // Golden frames pin what the renderer draws, bit for bit, on every platform CI
@@ -21,8 +21,8 @@ import (
 // terminal state, the embedded font, and integer-and-float pixel math; if any
 // platform drifts by even one alpha step, its hash differs and the build fails.
 //
-//	SIGMAMAX_UPDATE_GOLDEN=1 go test ./internal/render -run Golden   rewrite the hashes
-//	SIGMAMAX_GOLDEN_DUMP=dir go test ./internal/render -run Golden   also write PNGs
+//	NTRECORD_UPDATE_GOLDEN=1 go test ./internal/render -run Golden   rewrite the hashes
+//	NTRECORD_GOLDEN_DUMP=dir go test ./internal/render -run Golden   also write PNGs
 //
 // Review the PNGs before committing an update: a changed hash is a changed picture.
 const goldenFile = "testdata/golden/frames.sha256"
@@ -162,9 +162,9 @@ func readGolden(t *testing.T) map[string]string {
 }
 
 func TestGoldenFrames(t *testing.T) {
-	t.Setenv("SIGMAMAX_FONT_PATH", "")
-	update := os.Getenv("SIGMAMAX_UPDATE_GOLDEN") == "1"
-	dump := os.Getenv("SIGMAMAX_GOLDEN_DUMP")
+	t.Setenv("NTRECORD_FONT_PATH", "")
+	update := os.Getenv("NTRECORD_UPDATE_GOLDEN") == "1"
+	dump := os.Getenv("NTRECORD_GOLDEN_DUMP")
 	want := readGolden(t)
 	got := map[string]string{}
 	for _, s := range scenarios {
@@ -191,7 +191,7 @@ func TestGoldenFrames(t *testing.T) {
 		}
 		sort.Strings(names)
 		var b strings.Builder
-		b.WriteString("# sha256 of each golden frame (see golden_frames_test.go); regenerate with SIGMAMAX_UPDATE_GOLDEN=1\n")
+		b.WriteString("# sha256 of each golden frame (see golden_frames_test.go); regenerate with NTRECORD_UPDATE_GOLDEN=1\n")
 		for _, name := range names {
 			fmt.Fprintf(&b, "%s %s\n", name, got[name])
 		}
@@ -203,9 +203,9 @@ func TestGoldenFrames(t *testing.T) {
 	for _, s := range scenarios {
 		switch w, ok := want[s.name]; {
 		case !ok:
-			t.Errorf("%s: no golden hash; run with SIGMAMAX_UPDATE_GOLDEN=1 and review the pictures", s.name)
+			t.Errorf("%s: no golden hash; run with NTRECORD_UPDATE_GOLDEN=1 and review the pictures", s.name)
 		case w != got[s.name]:
-			t.Errorf("%s: frame changed\n  want %s\n   got %s\nSet SIGMAMAX_GOLDEN_DUMP=dir to see the pictures. On one platform only, this is cross-architecture drift.", s.name, w, got[s.name])
+			t.Errorf("%s: frame changed\n  want %s\n   got %s\nSet NTRECORD_GOLDEN_DUMP=dir to see the pictures. On one platform only, this is cross-architecture drift.", s.name, w, got[s.name])
 		}
 	}
 	for name := range want {

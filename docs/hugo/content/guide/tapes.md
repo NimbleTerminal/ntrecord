@@ -19,7 +19,7 @@ Enter                    # press a key
 Sleep 1s                 # let the viewer read it
 ```
 
-Run it with `sigmamax demo.tape`. Mistakes are reported with the file, line, and column. To check a tape without recording it, run `sigmamax validate demo.tape`: it also confirms the font, theme, `Require` programs, and outputs (video needs FFmpeg) are all usable.
+Run it with `ntrecord demo.tape`. Mistakes are reported with the file, line, and column. To check a tape without recording it, run `ntrecord validate demo.tape`: it also confirms the font, theme, `Require` programs, and outputs (video needs FFmpeg) are all usable.
 
 > [!WARNING]
 > **Only run tapes you trust.** A tape runs real commands with your privileges and can write files wherever its paths point.
@@ -87,13 +87,13 @@ Hide only pauses the recording. It does not wait for a running command, so put a
 
 ## Reproducible recordings
 
-Normally sigmamax records in real time, so two runs of a tape are close but not identical, and a slow encode can make the recording a little longer than the script. For a demo you regenerate and compare, or one that is a test, ask for a virtual clock:
+Normally ntrecord records in real time, so two runs of a tape are close but not identical, and a slow encode can make the recording a little longer than the script. For a demo you regenerate and compare, or one that is a test, ask for a virtual clock:
 
 ```sh
-sigmamax -mode deterministic demo.tape
+ntrecord -mode deterministic demo.tape
 ```
 
-Each step is held for exactly the time the tape says, once the program has settled, so the same tape gives the same file every time, and a `Sleep 5s` takes no real time. The one rule: a virtual clock does not wait for your program, so end any slow step with `Wait+Screen /text/` instead of guessing with `Sleep`. If a program is still drawing when the tape ends, sigmamax tells you. Programs that animate by themselves need the default real-time mode.
+Each step is held for exactly the time the tape says, once the program has settled, so the same tape gives the same file every time, and a `Sleep 5s` takes no real time. The one rule: a virtual clock does not wait for your program, so end any slow step with `Wait+Screen /text/` instead of guessing with `Sleep`. If a program is still drawing when the tape ends, ntrecord tells you. Programs that animate by themselves need the default real-time mode.
 
 ## More
 
@@ -104,4 +104,4 @@ Screenshot title.png              # save the current frame as a PNG
 Source common.tape                # reuse shared settings
 ```
 
-Every command and setting is in the [tape reference](https://github.com/NimbleMarkets/sigmamax/blob/main/docs/tapes.md). To change how the recording looks, see [How it looks](../appearance/).
+Every command and setting is in the [tape reference](https://github.com/NimbleTerminal/ntrecord/blob/main/docs/tapes.md). To change how the recording looks, see [How it looks](../appearance/).

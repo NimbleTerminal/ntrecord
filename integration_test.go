@@ -18,9 +18,9 @@ import (
 	"testing"
 	"time"
 
-	"github.com/NimbleMarkets/sigmamax/internal/record"
-	"github.com/NimbleMarkets/sigmamax/internal/tape"
-	"github.com/NimbleMarkets/sigmamax/internal/testvideo"
+	"nimbleterminal.dev/ntrecord/internal/record"
+	"nimbleterminal.dev/ntrecord/internal/tape"
+	"nimbleterminal.dev/ntrecord/internal/testvideo"
 )
 
 func readGIF(t *testing.T, path string) *gif.GIF {
@@ -210,8 +210,8 @@ func TestRecordExitAndCancellation(t *testing.T) {
 // Run the real main entry point in a subprocess so Go's special handling of
 // SIGPIPE on stdout is exercised, rather than only a synthetic Writer error.
 func TestBrokenStdoutStillSavesGIF(t *testing.T) {
-	if os.Getenv("SIGMAMAX_MAIN_HELPER") == "1" {
-		os.Args = []string{"sigmamax", "record", "-o", os.Getenv("SIGMAMAX_TEST_OUTPUT"), "-cols", "20", "-rows", "3", "--", "/bin/sh", "-c", "printf 'first\\n'; sleep 0.2; printf 'second\\n'; sleep 2"}
+	if os.Getenv("NTRECORD_MAIN_HELPER") == "1" {
+		os.Args = []string{"ntrecord", "record", "-o", os.Getenv("NTRECORD_TEST_OUTPUT"), "-cols", "20", "-rows", "3", "--", "/bin/sh", "-c", "printf 'first\\n'; sleep 0.2; printf 'second\\n'; sleep 2"}
 		main()
 		os.Exit(0)
 	}
@@ -219,7 +219,7 @@ func TestBrokenStdoutStillSavesGIF(t *testing.T) {
 	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 	defer cancel()
 	cmd := exec.CommandContext(ctx, os.Args[0], "-test.run=^TestBrokenStdoutStillSavesGIF$")
-	cmd.Env = append(os.Environ(), "SIGMAMAX_MAIN_HELPER=1", "SIGMAMAX_TEST_OUTPUT="+path)
+	cmd.Env = append(os.Environ(), "NTRECORD_MAIN_HELPER=1", "NTRECORD_TEST_OUTPUT="+path)
 	stdout, err := cmd.StdoutPipe()
 	if err != nil {
 		t.Fatal(err)
@@ -244,7 +244,7 @@ func TestBrokenStdoutStillSavesGIF(t *testing.T) {
 // Reproduce ntcharts' same-ID virtual PNG updates without its GPU dependency.
 // Pauses force capture ticks between APC chunks and inside a partial APC.
 func TestChunkedKittyAnimationHelper(t *testing.T) {
-	if os.Getenv("SIGMAMAX_CHUNKED_HELPER") != "1" {
+	if os.Getenv("NTRECORD_CHUNKED_HELPER") != "1" {
 		return
 	}
 	fmt.Print("\x1b[?25l")
@@ -288,7 +288,7 @@ func TestChunkedKittyAnimationContinuity(t *testing.T) {
 			c := tape.DefaultConfig()
 			c.Cols, c.Rows = 20, 3
 			c.Output = filepath.Join(t.TempDir(), "animation."+format)
-			c.Env = map[string]string{"SIGMAMAX_CHUNKED_HELPER": "1"}
+			c.Env = map[string]string{"NTRECORD_CHUNKED_HELPER": "1"}
 			ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 			defer cancel()
 			if err := record.Run(ctx, record.Options{Config: c, Command: []string{os.Args[0], "-test.run=^TestChunkedKittyAnimationHelper$"}}); err != nil {
@@ -337,11 +337,11 @@ func TestChunkedKittyAnimationContinuity(t *testing.T) {
 // This opt-in check captures the actual GPU application. CI always runs the
 // deterministic chunked-PNG regression above; it does not need a GPU/ntcharts.
 func TestNTChartsShaderContinuity(t *testing.T) {
-	bin := os.Getenv("SIGMAMAX_SHADER_BIN")
+	bin := os.Getenv("NTRECORD_SHADER_BIN")
 	if bin == "" {
-		t.Skip("set SIGMAMAX_SHADER_BIN or run task test:shaders")
+		t.Skip("set NTRECORD_SHADER_BIN or run task test:shaders")
 	}
-	path := os.Getenv("SIGMAMAX_SHADER_OUTPUT")
+	path := os.Getenv("NTRECORD_SHADER_OUTPUT")
 	if path == "" {
 		path = filepath.Join(t.TempDir(), "shaders.gif")
 	}

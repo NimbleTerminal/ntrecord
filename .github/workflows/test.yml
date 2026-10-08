@@ -4,7 +4,7 @@ jobs:
   test:
     timeout-minutes: 30
     env:
-      SIGMAMAX_REQUIRE_FFMPEG: '1'
+      NTRECORD_REQUIRE_FFMPEG: '1'
     strategy:
       fail-fast: false
       matrix:
@@ -35,7 +35,7 @@ jobs:
       - name: Check clean and rebuild
         run: |
           task clean
-          test ! -e bin/sigmamax
+          test ! -e bin/ntrecord
           task build
       - uses: actions/upload-artifact@v7
         with:
@@ -67,7 +67,7 @@ jobs:
           version: 3.54.0
       - run: task test:golden
         env:
-          SIGMAMAX_GOLDEN_DUMP: ${{ github.workspace }}/golden-frames
+          NTRECORD_GOLDEN_DUMP: ${{ github.workspace }}/golden-frames
       - uses: actions/upload-artifact@v7
         if: failure()
         with:

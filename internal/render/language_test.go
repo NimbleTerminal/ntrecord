@@ -7,7 +7,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/NimbleMarkets/sigmamax/internal/tape"
+	"nimbleterminal.dev/ntrecord/internal/tape"
 )
 
 func TestKeysAndPasteModes(t *testing.T) {

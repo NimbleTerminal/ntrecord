@@ -12,7 +12,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/NimbleMarkets/sigmamax/internal/tape"
+	"nimbleterminal.dev/ntrecord/internal/tape"
 )
 
 func newRenderer(t *testing.T) *Renderer {

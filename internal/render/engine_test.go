@@ -8,6 +8,6 @@ func TestEngineReportsLibghosttyBuild(t *testing.T) {
 		t.Fatal(err)
 	}
 	if e.Version == "" || !e.KittyGraphics {
-		t.Fatalf("%+v: sigmamax needs a libghostty-vt with Kitty graphics", e)
+		t.Fatalf("%+v: ntrecord needs a libghostty-vt with Kitty graphics", e)
 	}
 }

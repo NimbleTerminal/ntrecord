@@ -10,7 +10,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/NimbleMarkets/sigmamax/internal/tape"
+	"nimbleterminal.dev/ntrecord/internal/tape"
 )
 
 // recordedDuration records a tape and returns the GIF's total playback time.

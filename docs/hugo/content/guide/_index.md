@@ -4,7 +4,7 @@ weight: 10
 bookToC: false
 ---
 
-How to install sigmamax, make a recording, script it, and get the result you want.
+How to install ntrecord, make a recording, script it, and get the result you want.
 
 - [Install](install/)
 - [Your first recording](first-recording/)

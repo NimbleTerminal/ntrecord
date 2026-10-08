@@ -1,4 +1,4 @@
-// Package player displays sigmamax-rendered cast frames inside a Kitty-capable
+// Package player displays ntrecord-rendered cast frames inside a Kitty-capable
 // terminal. Recorded control sequences never reach the host terminal directly.
 package player
 
@@ -15,10 +15,10 @@ import (
 	"strings"
 	"time"
 
-	"github.com/NimbleMarkets/sigmamax/internal/playback"
-	"github.com/NimbleMarkets/sigmamax/internal/tape"
 	"golang.org/x/sys/unix"
 	"golang.org/x/term"
+	"nimbleterminal.dev/ntrecord/internal/playback"
+	"nimbleterminal.dev/ntrecord/internal/tape"
 )
 
 type Options struct {

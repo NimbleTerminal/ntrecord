@@ -1,11 +1,11 @@
 ---
-name: sigmamax
-description: Record, script, and render terminal sessions with sigmamax (a VHS-compatible recorder). Use when the user wants a GIF, MP4, WebM, asciicast (.cast), or screenshot of a CLI/TUI demo, a `.tape` file written or debugged, a deterministic or golden-file terminal recording, a recording that includes Kitty graphics, or a `.cast` converted to video.
+name: ntrecord
+description: Record, script, and render terminal sessions with ntrecord (a VHS-compatible recorder). Use when the user wants a GIF, MP4, WebM, asciicast (.cast), or screenshot of a CLI/TUI demo, a `.tape` file written or debugged, a deterministic or golden-file terminal recording, a recording that includes Kitty graphics, or a `.cast` converted to video.
 ---
 
-# sigmamax: terminal recordings you can script and check
+# ntrecord: terminal recordings you can script and check
 
-sigmamax runs a program on a real PTY, feeds its output to libghostty-vt, and
+ntrecord runs a program on a real PTY, feeds its output to libghostty-vt, and
 draws every frame itself. No browser, window, or screen capture, so it works
 headless (CI, SSH, an agent with no terminal). It reads VHS `.tape` scripts.
 
@@ -16,16 +16,16 @@ Three jobs: **script** a demo (`.tape`), **record** a command, **render** a
 
 | You want | Run |
 | --- | --- |
-| A repeatable demo | write `demo.tape`, then `sigmamax -mode deterministic demo.tape` |
-| A program that animates (spinners, TUIs, shaders) | `sigmamax demo.tape` (realtime, the default) |
-| One command recorded as-is | `sigmamax record -o out.gif -cols 100 -rows 30 -- cmd args` |
-| A cast turned into a picture | `sigmamax render in.cast -o out.gif` (also `.mp4`, `.webm`, `.txt`, `frames/`) |
-| To check a tape without recording | `sigmamax validate demo.tape...` |
-| To check the machine | `sigmamax doctor` |
+| A repeatable demo | write `demo.tape`, then `ntrecord -mode deterministic demo.tape` |
+| A program that animates (spinners, TUIs, shaders) | `ntrecord demo.tape` (realtime, the default) |
+| One command recorded as-is | `ntrecord record -o out.gif -cols 100 -rows 30 -- cmd args` |
+| A cast turned into a picture | `ntrecord render in.cast -o out.gif` (also `.mp4`, `.webm`, `.txt`, `frames/`) |
+| To check a tape without recording | `ntrecord validate demo.tape...` |
+| To check the machine | `ntrecord doctor` |
 
-**Never run `sigmamax record` without `-- command`.** With no command it opens
+**Never run `ntrecord record` without `-- command`.** With no command it opens
 an interactive shell and waits for a person to type and exit. Likewise
-`sigmamax play` needs a Kitty-capable terminal; it is for humans.
+`ntrecord play` needs a Kitty-capable terminal; it is for humans.
 
 **Only run tapes you trust**: `Set Shell`, `Type`, `Env` run real programs
 with the user's privileges, and `Output`/`Source`/`Screenshot` write and read
@@ -33,7 +33,7 @@ arbitrary paths. Read a tape before running one you did not write.
 
 ## The loop: validate, record, look
 
-1. `sigmamax validate demo.tape` first. It reports line:column errors, unknown
+1. `ntrecord validate demo.tape` first. It reports line:column errors, unknown
    themes/fonts, a missing `Require` program, and an `Output` that needs
    FFmpeg, all without starting a PTY.
 2. Run it. Add `Output demo.txt` next to the GIF: the text output holds the
@@ -75,12 +75,12 @@ Screenshot demo.png
   directory must be absent or empty). Repeat `Output` for several.
 - `Hide` cuts hidden time; run `Wait` before it so the command has finished.
   A tape must not end hidden ("no visible frames").
-- Paths (outputs, fonts, `Source`) resolve from the directory sigmamax was
+- Paths (outputs, fonts, `Source`) resolve from the directory ntrecord was
   *run in*, not the tape's directory. `cd` first or use absolute paths.
 - `Output` lines inside a `Source`d tape are ignored.
 
 Full command and setting tables: `docs/tapes.md` in the repo
-(https://github.com/NimbleMarkets/sigmamax/blob/main/docs/tapes.md).
+(https://github.com/NimbleTerminal/ntrecord/blob/main/docs/tapes.md).
 
 ## Waiting correctly (most failures are here)
 
@@ -107,9 +107,9 @@ not wait for your program, so any step that takes real time (build, download)
 ## Recording commands without a tape
 
 ```sh
-sigmamax record -o demo.gif -cols 100 -rows 30 -font-size 20 -- ls -la
-sigmamax record -o session.cast -- ./my-tui          # events, re-renderable
-sigmamax render session.cast -o s.mp4 -fps 30 -speed 2 -theme "Dracula"
+ntrecord record -o demo.gif -cols 100 -rows 30 -font-size 20 -- ls -la
+ntrecord record -o session.cast -- ./my-tui          # events, re-renderable
+ntrecord render session.cast -o s.mp4 -fps 30 -speed 2 -theme "Dracula"
 ```
 
 - The recording ends when the command does; add a trailing pause by wrapping
@@ -125,7 +125,7 @@ sigmamax render session.cast -o s.mp4 -fps 30 -speed 2 -theme "Dracula"
 ## Fonts, Unicode, Kitty graphics
 
 - Built in: Go Mono. Coverage of symbols, emoji, braille and CJK depends on
-  the sigmamax version (fallback fonts are evolving), so for anything beyond
+  the ntrecord version (fallback fonts are evolving), so for anything beyond
   plain text, check `docs/rendering.md` (or the project's current docs) and
   record a quick `Screenshot` rather than assuming. If a glyph comes out as a
   replacement mark, choose a font that has it: `Set FontFamily "Name"` or a
@@ -134,10 +134,10 @@ sigmamax render session.cast -o s.mp4 -fps 30 -speed 2 -theme "Dracula"
   style (no distinct bold/italic); a named family picks its own variants.
   `validate` loads the font, so a bad name or path fails before recording.
   Details: guide page "Using your own font"
-  (https://nimblemarkets.github.io/sigmamax/guide/fonts/).
-- Newer builds look up installed fallback fonts; `SIGMAMAX_FONT_PATH=""`
+  (https://nimbleterminal.github.io/ntrecord/guide/fonts/).
+- Newer builds look up installed fallback fonts; `NTRECORD_FONT_PATH=""`
   restricts that to bundled fonts for machine-independent output.
-- Programs see `TERM=xterm-ghostty`, `TERM_PROGRAM=sigmamax`. Kitty graphics
+- Programs see `TERM=xterm-ghostty`, `TERM_PROGRAM=ntrecord`. Kitty graphics
   work for **direct** transfer (PNG/RGB/RGBA, placements, Unicode
   placeholders). File and shared-memory transfer, animation frames, and
   relative placements do not. If images don't show: `env -u NO_COLOR …`,
@@ -156,14 +156,14 @@ sigmamax render session.cast -o s.mp4 -fps 30 -speed 2 -theme "Dracula"
 | Prompt isn't `$` | A shell rc file replaced it; use default `/bin/sh`, or `Hide` setup then `Show` |
 | Replacement mark for a glyph | Font lacks it; set `FontFamily` (see Fonts above) |
 
-If stuck: `sigmamax doctor`, then `sigmamax --version`, and point the user to
-https://github.com/NimbleMarkets/sigmamax/issues with the tape and error text.
+If stuck: `ntrecord doctor`, then `ntrecord --version`, and point the user to
+https://github.com/NimbleTerminal/ntrecord/issues with the tape and error text.
 
 ## Guardrails
 
-- Don't hand-write ffmpeg/PTY/screenshot pipelines for a demo sigmamax can
+- Don't hand-write ffmpeg/PTY/screenshot pipelines for a demo ntrecord can
   record; don't guess the screen contents when `.txt` output shows them.
 - Don't use `Sleep` as a substitute for `Wait` on real work.
 - Keep generated GIF/MP4 out of git unless the user wants them committed.
-- Installed from Homebrew: `brew install --cask nimblemarkets/tap/sigmamax`.
-  In a source checkout, `task build` makes `bin/sigmamax`.
+- Installed from Homebrew: `brew install --cask nimbleterminal/tap/ntrecord`.
+  In a source checkout, `task build` makes `bin/ntrecord`.

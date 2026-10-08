@@ -15,7 +15,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/NimbleMarkets/sigmamax/internal/testvideo"
+	"nimbleterminal.dev/ntrecord/internal/testvideo"
 )
 
 func TestVideoTimingPixelsAndPadding(t *testing.T) {
@@ -128,7 +128,7 @@ func TestVideoFailurePreservesDestination(t *testing.T) {
 	if err != nil || !bytes.Equal(b, old) {
 		t.Fatalf("destination changed: %q, %v", b, err)
 	}
-	files, _ := filepath.Glob(filepath.Join(dir, ".sigmamax-*"))
+	files, _ := filepath.Glob(filepath.Join(dir, ".ntrecord-*"))
 	if len(files) != 0 {
 		t.Fatalf("leaked temporary files: %v", files)
 	}

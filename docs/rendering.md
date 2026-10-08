@@ -1,6 +1,6 @@
 # Rendering and Kitty graphics
 
-Terminal parsing is left entirely to [libghostty](https://github.com/ghostty-org/ghostty), through its [Go binding](https://go.mitchellh.com/libghostty). sigmamax reads the screen state from it and draws each frame in Go, in separate passes for backgrounds, text, and Kitty images. The geometry and layering follow [Ghostling](https://github.com/ghostty-org/ghostling).
+Terminal parsing is left entirely to [libghostty](https://github.com/ghostty-org/ghostty), through its [Go binding](https://go.mitchellh.com/libghostty). ntrecord reads the screen state from it and draws each frame in Go, in separate passes for backgrounds, text, and Kitty images. The geometry and layering follow [Ghostling](https://github.com/ghostty-org/ghostling).
 
 ## Fonts and text
 
@@ -18,7 +18,7 @@ outline font. Missing clusters use a replacement mark. Installed font coverage
 can differ between machines.
 
 System fallback searches the standard macOS/Linux font directories, including
-user font directories and `$XDG_DATA_HOME/fonts`. `SIGMAMAX_FONT_PATH` replaces
+user font directories and `$XDG_DATA_HOME/fonts`. `NTRECORD_FONT_PATH` replaces
 those **fallback** roots with a platform-separated list of directories or font
 files. Set it to an empty string for reproducible bundled-only rendering. It does
 not change named primary-font lookup.
@@ -69,8 +69,8 @@ Try the bundled Unicode showcase from the repository root:
 
 ```sh
 task build
-bin/sigmamax examples/unicode.tape
-bin/sigmamax play examples/unicode.cast
+bin/ntrecord examples/unicode.tape
+bin/ntrecord play examples/unicode.cast
 ```
 
 This produces GIF, PNG, and cast outputs showing accents, symbols, cell graphics,
@@ -90,11 +90,11 @@ These parts of the protocol are supported:
 
 The terminal gives Kitty images 64 MiB of storage. Image pixels and placement geometry are copied out of libghostty after every write, before the terminal changes again, and frames are composited only from those copies. Memory borrowed from C is never kept across writes.
 
-Not supported: animation frames, relative placements, and shared-memory, regular-file, and temporary-file transfer. The file and shared-memory transports are turned off. libghostty may understand more of the protocol than this, but only what is listed is part of what sigmamax promises. Repeated PNG transfers do animate; what is missing is Kitty's separate animation-frame protocol.
+Not supported: animation frames, relative placements, and shared-memory, regular-file, and temporary-file transfer. The file and shared-memory transports are turned off. libghostty may understand more of the protocol than this, but only what is listed is part of what ntrecord promises. Repeated PNG transfers do animate; what is missing is Kitty's separate animation-frame protocol.
 
 ### How programs detect it
 
-Recorded programs run with `TERM=xterm-ghostty`, the name most programs check to learn that a terminal draws Kitty graphics. The matching terminfo entry is generated from the pinned Ghostty revision (`task terminfo`) and embedded in the binary. For the length of a recording it is installed in a private directory and exposed through `TERMINFO`, so terminfo readers work on machines without Ghostty. A tape's `Env TERM ...` overrides it, and `TERM_PROGRAM` is `sigmamax`.
+Recorded programs run with `TERM=xterm-ghostty`, the name most programs check to learn that a terminal draws Kitty graphics. The matching terminfo entry is generated from the pinned Ghostty revision (`task terminfo`) and embedded in the binary. For the length of a recording it is installed in a private directory and exposed through `TERMINFO`, so terminfo readers work on machines without Ghostty. A tape's `Env TERM ...` overrides it, and `TERM_PROGRAM` is `ntrecord`.
 
 `NO_COLOR` must be unset. Placeholder images keep their image ID in the foreground color of the cell, so a program that turns colors off cannot show them.
 
@@ -105,7 +105,7 @@ For the ntcharts shader example, ask for direct transfer. ntcharts recognizes th
 ```sh
 cd /path/to/ntcharts/examples/shaders
 env -u NO_COLOR \
-  /path/to/sigmamax/bin/sigmamax record -o /tmp/shaders.gif -cols 80 -rows 24 -- \
+  /path/to/ntrecord/bin/ntrecord record -o /tmp/shaders.gif -cols 80 -rows 24 -- \
   go run . -medium=direct -fullscreen -fps=20 -duration=8s
 ```
 
@@ -122,7 +122,7 @@ This test needs a hardware GPU, so it is opt-in. The normal test suite uses a sm
 
 ### Flicker while an image is replaced
 
-The pinned libghostty removes an image as soon as a chunked replacement starts, before the new one is complete. While recording, if displayed placeholder cells lose their image, sigmamax keeps showing the last frame for up to 250 ms and waits for the replacement. Clearing the placeholder cells ends the wait at once.
+The pinned libghostty removes an image as soon as a chunked replacement starts, before the new one is complete. While recording, if displayed placeholder cells lose their image, ntrecord keeps showing the last frame for up to 250 ms and waits for the replacement. Clearing the placeholder cells ends the wait at once.
 
 libghostty does not report uploads in progress, so deleting an image on purpose while its placeholder cells stay on screen gets the same short delay. An abandoned upload can never hold the recording indefinitely, and a screenshot always shows the terminal's current state.
 

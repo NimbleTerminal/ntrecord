@@ -13,8 +13,8 @@ import (
 	"testing"
 	"time"
 
-	"github.com/NimbleMarkets/sigmamax/internal/asciicast"
-	"github.com/NimbleMarkets/sigmamax/internal/tape"
+	"nimbleterminal.dev/ntrecord/internal/asciicast"
+	"nimbleterminal.dev/ntrecord/internal/tape"
 )
 
 func TestCastPTYKittyRoundTrip(t *testing.T) {
@@ -23,7 +23,7 @@ func TestCastPTYKittyRoundTrip(t *testing.T) {
 	c.Theme = `{"background":"#123456"}`
 	dir := t.TempDir()
 	c.Outputs = []string{filepath.Join(dir, "session.cast"), filepath.Join(dir, "session.txt")}
-	t.Setenv("SIGMAMAX_PRIVATE_TEST", "must-not-be-metadata")
+	t.Setenv("NTRECORD_PRIVATE_TEST", "must-not-be-metadata")
 	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 	defer cancel()
 	err := Run(ctx, Options{Config: c, Command: []string{"/bin/sh", "-c", `printf '\033[?25l'; cat "$1"; printf '\033[2;1HHELLO 👍🏽'; sleep 0.15; exit 7`, "cast-test", "../render/testdata/kitty.apc"}})
@@ -179,7 +179,7 @@ func TestRenderCastFailurePreservesDestination(t *testing.T) {
 		if err != nil || string(b) != "original" {
 			t.Fatalf("overwrote destination: %s %v", b, err)
 		}
-		leftovers, _ := filepath.Glob(filepath.Join(filepath.Dir(c.Output), ".sigmamax-*"))
+		leftovers, _ := filepath.Glob(filepath.Join(filepath.Dir(c.Output), ".ntrecord-*"))
 		if len(leftovers) > 0 {
 			t.Fatal(leftovers)
 		}

@@ -18,7 +18,7 @@ import (
 	"strings"
 	"time"
 
-	"github.com/NimbleMarkets/sigmamax/internal/gifencode"
+	"nimbleterminal.dev/ntrecord/internal/gifencode"
 )
 
 func main() {

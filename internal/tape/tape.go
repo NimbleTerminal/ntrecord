@@ -13,7 +13,7 @@ import (
 	"time"
 	"unicode/utf8"
 
-	"github.com/NimbleMarkets/sigmamax/internal/encode"
+	"nimbleterminal.dev/ntrecord/internal/encode"
 )
 
 // Mode selects the clock a recording runs on.
@@ -58,7 +58,7 @@ type Config struct {
 	WaitPattern                                  string
 	// Mode is the recording clock; the command line sets it, not tapes.
 	Mode Mode
-	// Version is the sigmamax release advertised to recorded programs; it is
+	// Version is the ntrecord release advertised to recorded programs; it is
 	// set by the command line, not by tapes.
 	Version string
 }

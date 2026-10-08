@@ -5,7 +5,7 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/NimbleMarkets/sigmamax/internal/tape"
+	"nimbleterminal.dev/ntrecord/internal/tape"
 )
 
 func parse(t *testing.T, source string) *tape.Tape {

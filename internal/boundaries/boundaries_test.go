@@ -1,4 +1,4 @@
-// Package boundaries holds the test that keeps sigmamax's package structure
+// Package boundaries holds the test that keeps ntrecord's package structure
 // honest. Each package lists what it may import; anything else fails the build.
 // The point is to keep three seams narrow: libghostty (and so cgo) is reached
 // only through internal/render, external programs are started only by the
@@ -17,7 +17,7 @@ import (
 	"testing"
 )
 
-const module = "github.com/NimbleMarkets/sigmamax"
+const module = "nimbleterminal.dev/ntrecord"
 
 // rule is what one package may import beyond the standard library.
 type rule struct {

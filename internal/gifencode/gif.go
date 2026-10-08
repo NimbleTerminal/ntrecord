@@ -170,7 +170,7 @@ func (w *limitedSource) Write(p []byte) (int, error) {
 	return w.Buffer.Write(p)
 }
 
-// defaultSeed is sigmamax's built-in terminal background and foreground.
+// defaultSeed is ntrecord's built-in terminal background and foreground.
 var defaultSeed = color.Palette{color.RGBA{24, 26, 32, 255}, color.RGBA{224, 228, 235, 255}}
 
 // buildPalette returns the 256-color Plan9 palette with each seed color made

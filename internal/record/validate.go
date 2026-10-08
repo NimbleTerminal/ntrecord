@@ -5,9 +5,9 @@ import (
 	"fmt"
 	"os"
 
-	"github.com/NimbleMarkets/sigmamax/internal/encode"
-	"github.com/NimbleMarkets/sigmamax/internal/render"
-	"github.com/NimbleMarkets/sigmamax/internal/tape"
+	"nimbleterminal.dev/ntrecord/internal/encode"
+	"nimbleterminal.dev/ntrecord/internal/render"
+	"nimbleterminal.dev/ntrecord/internal/tape"
 )
 
 // Summary is what a tape would record, found without starting a PTY.

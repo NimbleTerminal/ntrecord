@@ -11,11 +11,11 @@ import (
 	"strings"
 	"syscall"
 
-	"github.com/NimbleMarkets/sigmamax/internal/doctor"
-	"github.com/NimbleMarkets/sigmamax/internal/encode"
-	"github.com/NimbleMarkets/sigmamax/internal/record"
-	"github.com/NimbleMarkets/sigmamax/internal/tape"
 	"golang.org/x/term"
+	"nimbleterminal.dev/ntrecord/internal/doctor"
+	"nimbleterminal.dev/ntrecord/internal/encode"
+	"nimbleterminal.dev/ntrecord/internal/record"
+	"nimbleterminal.dev/ntrecord/internal/tape"
 )
 
 // version is stamped by GoReleaser and task build VERSION=... .
@@ -28,18 +28,18 @@ func main() {
 	signal.Notify(sigpipe, syscall.SIGPIPE)
 	defer signal.Stop(sigpipe)
 	if err := run(os.Args[1:], os.Stdout, os.Stderr); err != nil {
-		fmt.Fprintln(os.Stderr, "sigmamax:", err)
+		fmt.Fprintln(os.Stderr, "ntrecord:", err)
 		os.Exit(1)
 	}
 }
 
-const usage = `Usage: sigmamax [-mode realtime|deterministic] <file.tape>
-       sigmamax record [-o output] [-shell executable] [-cols n] [-rows n] [-font-size pixels] [-- command args...]
-       sigmamax play <file.cast> [-paused] [-speed n]
-       sigmamax render <file.cast> -o <output> [-font-size pixels] [-fps n] [-speed n]
-       sigmamax validate <file.tape>...
-       sigmamax doctor
-       sigmamax --version
+const usage = `Usage: ntrecord [-mode realtime|deterministic] <file.tape>
+       ntrecord record [-o output] [-shell executable] [-cols n] [-rows n] [-font-size pixels] [-- command args...]
+       ntrecord play <file.cast> [-paused] [-speed n]
+       ntrecord render <file.cast> -o <output> [-font-size pixels] [-fps n] [-speed n]
+       ntrecord validate <file.tape>...
+       ntrecord doctor
+       ntrecord --version
 
 -mode picks the clock for a tape. realtime (the default) samples the screen as time
 passes and captures animations. deterministic runs a virtual clock: each step is
@@ -51,7 +51,7 @@ doctor checks that this machine can record.`
 
 func run(args []string, stdout, stderr io.Writer) error {
 	if len(args) == 1 && (args[0] == "--version" || args[0] == "-version" || args[0] == "version") {
-		fmt.Fprintln(stdout, "sigmamax", version)
+		fmt.Fprintln(stdout, "ntrecord", version)
 		return nil
 	}
 	if len(args) == 0 || args[0] == "-h" || args[0] == "--help" {
@@ -99,7 +99,7 @@ func run(args []string, stdout, stderr io.Writer) error {
 			defer term.Restore(int(os.Stdin.Fd()), state)
 		}
 	} else {
-		fs := flag.NewFlagSet("sigmamax", flag.ContinueOnError)
+		fs := flag.NewFlagSet("ntrecord", flag.ContinueOnError)
 		fs.SetOutput(stderr)
 		modeFlag := fs.String("mode", string(tape.Realtime), "clock: realtime or deterministic")
 		if err := fs.Parse(args); err != nil {

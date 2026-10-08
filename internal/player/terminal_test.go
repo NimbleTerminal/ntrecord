@@ -12,9 +12,9 @@ import (
 	"testing"
 	"time"
 
-	"github.com/NimbleMarkets/sigmamax/internal/tape"
 	"github.com/creack/pty"
 	"golang.org/x/term"
+	"nimbleterminal.dev/ntrecord/internal/tape"
 )
 
 func TestTerminalPlayerControlsAndRestoration(t *testing.T) {
@@ -147,7 +147,7 @@ func TestTerminalPlayerControlsAndRestoration(t *testing.T) {
 // The real CLI opens /dev/tty, which is a different device from a PTY slave on
 // macOS. Exercise that path in a subprocess with its own controlling terminal.
 func TestControllingTTYHelper(t *testing.T) {
-	path := os.Getenv("SIGMAMAX_PLAYER_TTY_HELPER")
+	path := os.Getenv("NTRECORD_PLAYER_TTY_HELPER")
 	if path == "" {
 		return
 	}
@@ -187,7 +187,7 @@ func TestPlayerOpensControllingTTY(t *testing.T) {
 	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 	defer cancel()
 	cmd := exec.CommandContext(ctx, os.Args[0], "-test.run=^TestControllingTTYHelper$")
-	cmd.Env = append(os.Environ(), "SIGMAMAX_PLAYER_TTY_HELPER="+path)
+	cmd.Env = append(os.Environ(), "NTRECORD_PLAYER_TTY_HELPER="+path)
 	master, err := pty.StartWithSize(cmd, &pty.Winsize{Cols: 80, Rows: 24})
 	if err != nil {
 		t.Fatal(err)

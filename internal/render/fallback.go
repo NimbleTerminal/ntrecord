@@ -84,7 +84,7 @@ type fallbackCatalog struct {
 }
 
 func fontRoots() []string {
-	if paths, ok := os.LookupEnv("SIGMAMAX_FONT_PATH"); ok {
+	if paths, ok := os.LookupEnv("NTRECORD_FONT_PATH"); ok {
 		if paths == "" {
 			return nil
 		}

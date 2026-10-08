@@ -5,7 +5,7 @@ import (
 	"slices"
 	"testing"
 
-	"github.com/NimbleMarkets/sigmamax/internal/tape"
+	"nimbleterminal.dev/ntrecord/internal/tape"
 )
 
 func TestPaletteSeedCarriesThemeColors(t *testing.T) {

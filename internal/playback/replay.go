@@ -12,9 +12,9 @@ import (
 	"strconv"
 	"time"
 
-	"github.com/NimbleMarkets/sigmamax/internal/asciicast"
-	"github.com/NimbleMarkets/sigmamax/internal/render"
-	"github.com/NimbleMarkets/sigmamax/internal/tape"
+	"nimbleterminal.dev/ntrecord/internal/asciicast"
+	"nimbleterminal.dev/ntrecord/internal/render"
+	"nimbleterminal.dev/ntrecord/internal/tape"
 )
 
 // Replay owns a renderer, but not src. The caller serializes access. Seeking

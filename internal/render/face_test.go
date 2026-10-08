@@ -19,9 +19,9 @@ import (
 func TestFaceMatchesOpentype(t *testing.T) {
 	// opentype's lerp is fused on arm64, which moves coverage by a step or two
 	// (more at large sizes). With fusion off it must match exactly:
-	//   SIGMAMAX_FACE_EXACT=1 go test -gcflags=all=-d=fmahash=n ./internal/render -run FaceMatches
+	//   NTRECORD_FACE_EXACT=1 go test -gcflags=all=-d=fmahash=n ./internal/render -run FaceMatches
 	tolerance := 2
-	if os.Getenv("SIGMAMAX_FACE_EXACT") == "1" {
+	if os.Getenv("NTRECORD_FACE_EXACT") == "1" {
 		tolerance = 0
 	}
 	for _, ttf := range [][]byte{gomono.TTF, gomonobolditalic.TTF} {

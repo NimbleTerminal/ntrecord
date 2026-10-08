@@ -11,16 +11,16 @@ import (
 	"strings"
 	"time"
 
-	"github.com/NimbleMarkets/sigmamax/internal/encode"
-	"github.com/NimbleMarkets/sigmamax/internal/render"
-	"github.com/NimbleMarkets/sigmamax/internal/tape"
-	"github.com/NimbleMarkets/sigmamax/internal/terminfo"
 	"github.com/creack/pty"
+	"nimbleterminal.dev/ntrecord/internal/encode"
+	"nimbleterminal.dev/ntrecord/internal/render"
+	"nimbleterminal.dev/ntrecord/internal/tape"
+	"nimbleterminal.dev/ntrecord/internal/terminfo"
 )
 
 // Options configure a run. The zero value checks the defaults.
 type Options struct {
-	Version string // the sigmamax version to report
+	Version string // the ntrecord version to report
 	Shell   string // the shell to check; default /bin/sh
 }
 
@@ -48,7 +48,7 @@ func Run(w io.Writer, o Options) bool {
 		o.Shell = tape.DefaultConfig().Shell
 	}
 	results := []result{
-		{"sigmamax", ok, fmt.Sprintf("%s %s/%s", o.Version, runtime.GOOS, runtime.GOARCH)},
+		{"ntrecord", ok, fmt.Sprintf("%s %s/%s", o.Version, runtime.GOOS, runtime.GOARCH)},
 		checkEngine(),
 		checkRenderer(),
 		checkPTY(o.Shell),
@@ -71,7 +71,7 @@ func Run(w io.Writer, o Options) bool {
 	}
 	switch {
 	case fails > 0:
-		fmt.Fprintf(w, "\n%d check(s) failed: sigmamax cannot record on this machine until they are fixed.\n", fails)
+		fmt.Fprintf(w, "\n%d check(s) failed: ntrecord cannot record on this machine until they are fixed.\n", fails)
 	case warns > 0:
 		fmt.Fprintf(w, "\nReady to record, with %d warning(s) above.\n", warns)
 	default:
@@ -102,7 +102,7 @@ func checkRenderer() result {
 		return result{"renderer", fail, err.Error()}
 	}
 	defer r.Close()
-	if err = r.Write([]byte("sigmamax \x1b[31mdoctor\x1b[m\r\n")); err != nil {
+	if err = r.Write([]byte("ntrecord \x1b[31mdoctor\x1b[m\r\n")); err != nil {
 		return result{"renderer", fail, err.Error()}
 	}
 	frame, err := r.Frame()
@@ -119,7 +119,7 @@ func checkPTY(shell string) result {
 	if err != nil {
 		return result{"pty", fail, fmt.Sprintf("shell %s not found: %v", shell, err)}
 	}
-	cmd := exec.Command(path, "-c", "printf sigmamax-ok")
+	cmd := exec.Command(path, "-c", "printf ntrecord-ok")
 	ptmx, err := pty.Start(cmd)
 	if err != nil {
 		return result{"pty", fail, "cannot open a PTY: " + err.Error()}
@@ -129,7 +129,7 @@ func checkPTY(shell string) result {
 	go func() {
 		var b strings.Builder
 		buf := make([]byte, 256)
-		for !strings.Contains(b.String(), "sigmamax-ok") {
+		for !strings.Contains(b.String(), "ntrecord-ok") {
 			n, err := ptmx.Read(buf)
 			b.Write(buf[:n])
 			if err != nil {
@@ -141,7 +141,7 @@ func checkPTY(shell string) result {
 	select {
 	case out := <-done:
 		_ = cmd.Wait()
-		if strings.Contains(out, "sigmamax-ok") {
+		if strings.Contains(out, "ntrecord-ok") {
 			return result{"pty", ok, fmt.Sprintf("%s ran on a PTY", path)}
 		}
 		return result{"pty", fail, fmt.Sprintf("%s ran but its output did not arrive: %q", path, out)}
@@ -154,7 +154,7 @@ func checkPTY(shell string) result {
 
 // checkTerminfo installs the embedded entry and asks ncurses to find it.
 func checkTerminfo() result {
-	dir, err := os.MkdirTemp("", "sigmamax-doctor-")
+	dir, err := os.MkdirTemp("", "ntrecord-doctor-")
 	if err != nil {
 		return result{"terminfo", fail, err.Error()}
 	}

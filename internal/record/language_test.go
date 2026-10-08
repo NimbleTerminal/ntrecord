@@ -12,7 +12,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/NimbleMarkets/sigmamax/internal/tape"
+	"nimbleterminal.dev/ntrecord/internal/tape"
 )
 
 func TestLanguagePlayback(t *testing.T) {
@@ -177,7 +177,7 @@ func TestRecordedProgramSeesGhosttyTerminal(t *testing.T) {
 	if err != nil || !strings.Contains(string(b), "term=xterm-ghostty colors=256") {
 		t.Fatalf("terminal identity not visible to the program: %v\n%s", err, b)
 	}
-	if left, _ := filepath.Glob(filepath.Join(tmp, "sigmamax-terminfo-*")); len(left) != 0 {
+	if left, _ := filepath.Glob(filepath.Join(tmp, "ntrecord-terminfo-*")); len(left) != 0 {
 		t.Errorf("terminfo directory not removed: %v", left)
 	}
 }

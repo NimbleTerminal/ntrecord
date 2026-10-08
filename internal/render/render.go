@@ -12,10 +12,10 @@ import (
 	"sync"
 	"time"
 
-	"github.com/NimbleMarkets/sigmamax/internal/tape"
 	vt "go.mitchellh.com/libghostty"
 	syspng "go.mitchellh.com/libghostty/sys/png"
 	xdraw "golang.org/x/image/draw"
+	"nimbleterminal.dev/ntrecord/internal/tape"
 )
 
 var initPNG = sync.OnceValue(func() error { return vt.SysSetDecodePng(syspng.Decode) })
@@ -142,7 +142,7 @@ func New(c tape.Config) (_ *Renderer, err error) {
 		}),
 		vt.WithSizeReport(func(_ *vt.Terminal) (vt.SizeReportSize, bool) {
 			return vt.SizeReportSize{Columns: uint16(r.Cols), Rows: uint16(r.Rows), CellWidth: uint32(r.CellWidth), CellHeight: uint32(r.CellHeight)}, true
-		}), vt.WithXtversion(func(_ *vt.Terminal) string { return "sigmamax " + c.ProgramVersion() }))
+		}), vt.WithXtversion(func(_ *vt.Terminal) string { return "ntrecord " + c.ProgramVersion() }))
 	if err != nil {
 		return nil, err
 	}
@@ -204,7 +204,7 @@ func (r *Renderer) Close() {
 }
 
 // Write is the only VT input path. libghostty parses APCs and produces replies
-// through WithWritePty; sigmamax never parses escape protocols a second time.
+// through WithWritePty; ntrecord never parses escape protocols a second time.
 func (r *Renderer) Write(b []byte) error {
 	r.frame = nil
 	r.term.VTWrite(b)

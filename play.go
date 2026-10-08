@@ -7,8 +7,8 @@ import (
 	"fmt"
 	"io"
 
-	"github.com/NimbleMarkets/sigmamax/internal/player"
-	"github.com/NimbleMarkets/sigmamax/internal/tape"
+	"nimbleterminal.dev/ntrecord/internal/player"
+	"nimbleterminal.dev/ntrecord/internal/tape"
 )
 
 func playCast(ctx context.Context, args []string, stderr io.Writer) error {
@@ -32,7 +32,7 @@ func playCast(ctx context.Context, args []string, stderr io.Writer) error {
 		return err
 	}
 	if fs.NArg() != 1 {
-		return fmt.Errorf("usage: sigmamax play <file.cast> [options]")
+		return fmt.Errorf("usage: ntrecord play <file.cast> [options]")
 	}
 	return player.Run(ctx, fs.Arg(0), opts)
 }

@@ -1,9 +1,9 @@
-/sigmamax
+/ntrecord
 .DS_Store
 *.gif
 *.mp4
 *.webm
-.sigmamax-*
+.ntrecord-*
 /.deps/
 /bin/
 /.task/

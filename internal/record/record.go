@@ -18,10 +18,10 @@ import (
 	"time"
 	"unicode/utf8"
 
-	"github.com/NimbleMarkets/sigmamax/internal/render"
-	"github.com/NimbleMarkets/sigmamax/internal/tape"
-	"github.com/NimbleMarkets/sigmamax/internal/terminfo"
 	"github.com/creack/pty"
+	"nimbleterminal.dev/ntrecord/internal/render"
+	"nimbleterminal.dev/ntrecord/internal/tape"
+	"nimbleterminal.dev/ntrecord/internal/terminfo"
 )
 
 type Options struct {
@@ -99,7 +99,7 @@ func Run(parent context.Context, opts Options) error {
 	period := time.Duration(float64(time.Second) / rate)
 	// The recorded program's terminfo lives in a private directory, removed when
 	// the recording ends. If it cannot be made, the program gets xterm-256color.
-	terminfoDir, err := os.MkdirTemp("", "sigmamax-terminfo-")
+	terminfoDir, err := os.MkdirTemp("", "ntrecord-terminfo-")
 	if err == nil {
 		defer os.RemoveAll(terminfoDir)
 		if err = terminfo.Install(terminfoDir); err != nil {
@@ -579,7 +579,7 @@ func Run(parent context.Context, opts Options) error {
 	// after the tape's final step (a virtual Sleep does not wait for it).
 	if virtual && visible && runErr == nil && opts.Warn != nil && !opts.Config.CursorBlink && lastEmitted != nil {
 		if f, err := r.FrameAfter(recorded); err == nil && !bytes.Equal(f.Pix, lastEmitted.Pix) {
-			fmt.Fprintln(opts.Warn, "sigmamax: warning: the program was still producing output when the tape ended, and a deterministic recording does not wait for it: Sleep is virtual time. End slow steps with Wait+Screen /text/.")
+			fmt.Fprintln(opts.Warn, "ntrecord: warning: the program was still producing output when the tape ended, and a deterministic recording does not wait for it: Sleep is virtual time. End slow steps with Wait+Screen /text/.")
 		}
 	}
 	if virtual {
@@ -718,7 +718,7 @@ func environment(base []string, version, terminfoDir string) []string {
 			env = append(env, "TERMINFO_DIRS="+dirs)
 		}
 	}
-	return append(env, "TERM="+term, "COLORTERM=truecolor", "TERM_PROGRAM=sigmamax", "TERM_PROGRAM_VERSION="+version, "PS1=$ ", "PS2=> ")
+	return append(env, "TERM="+term, "COLORTERM=truecolor", "TERM_PROGRAM=ntrecord", "TERM_PROGRAM_VERSION="+version, "PS1=$ ", "PS2=> ")
 }
 
 func replaceEnv(env []string, key, value string) []string {

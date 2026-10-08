@@ -8,9 +8,9 @@ import (
 	"math"
 	"strings"
 
-	"github.com/NimbleMarkets/sigmamax/internal/tape"
-	"github.com/NimbleMarkets/sigmamax/internal/theme"
 	vt "go.mitchellh.com/libghostty"
+	"nimbleterminal.dev/ntrecord/internal/tape"
+	"nimbleterminal.dev/ntrecord/internal/theme"
 )
 
 func (r *Renderer) applyTheme(c tape.Config) error {

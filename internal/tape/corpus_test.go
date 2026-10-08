@@ -14,7 +14,7 @@ import (
 
 // The corpus is every .tape in Charm's VHS at the commit in testdata/vhs/MANIFEST:
 // 109 tapes, from one-line settings to the Bubble Tea gallery. A VHS tape should
-// be a sigmamax tape, so each must parse. Where sigmamax intentionally differs,
+// be a ntrecord tape, so each must parse. Where ntrecord intentionally differs,
 // knownDifferences says so, with the reason; the test fails if that list and
 // reality drift apart in either direction.
 const corpusDir = "testdata/vhs"
@@ -25,7 +25,7 @@ var rejectedByVHSToo = map[string]string{
 	"examples/errors/parser.tape": "VHS's demonstration of parse errors (unknown setting and commands)",
 }
 
-// knownDifferences maps a corpus tape that VHS accepts to why sigmamax rejects
+// knownDifferences maps a corpus tape that VHS accepts to why ntrecord rejects
 // it. Keep it empty when it can be.
 var knownDifferences = map[string]string{}
 

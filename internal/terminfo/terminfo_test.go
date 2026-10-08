@@ -12,7 +12,7 @@ import (
 // the search list are empty, so a Ghostty installed on the host cannot answer.
 func isolated(dir string, name string, args ...string) (string, error) {
 	cmd := exec.Command(name, args...)
-	cmd.Env = []string{"PATH=" + os.Getenv("PATH"), "HOME=" + os.TempDir() + "/sigmamax-no-home", "TERMINFO=" + dir}
+	cmd.Env = []string{"PATH=" + os.Getenv("PATH"), "HOME=" + os.TempDir() + "/ntrecord-no-home", "TERMINFO=" + dir}
 	out, err := cmd.CombinedOutput()
 	return strings.TrimSpace(string(out)), err
 }

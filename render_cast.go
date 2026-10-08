@@ -9,8 +9,8 @@ import (
 	"os"
 	"path/filepath"
 
-	"github.com/NimbleMarkets/sigmamax/internal/record"
-	"github.com/NimbleMarkets/sigmamax/internal/tape"
+	"nimbleterminal.dev/ntrecord/internal/record"
+	"nimbleterminal.dev/ntrecord/internal/tape"
 )
 
 func renderCast(ctx context.Context, args []string, stderr io.Writer) error {
@@ -35,7 +35,7 @@ func renderCast(ctx context.Context, args []string, stderr io.Writer) error {
 		return err
 	}
 	if fs.NArg() != 1 || c.Output == "" {
-		return fmt.Errorf("usage: sigmamax render <file.cast> -o <output> [options]")
+		return fmt.Errorf("usage: ntrecord render <file.cast> -o <output> [options]")
 	}
 	src, err := os.Open(fs.Arg(0))
 	if err != nil {

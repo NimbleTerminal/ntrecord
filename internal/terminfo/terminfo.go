@@ -1,4 +1,4 @@
-// Package terminfo carries the compiled entry behind sigmamax's declared
+// Package terminfo carries the compiled entry behind ntrecord's declared
 // TERM, xterm-ghostty. Programs decide whether a terminal draws images by its
 // name, not by probing, so a recorded program that sees xterm-256color assumes
 // no Kitty graphics. Declaring Ghostty's name without Ghostty's entry would break
@@ -17,7 +17,7 @@ import (
 	"path/filepath"
 )
 
-// Term is the TERM value sigmamax declares.
+// Term is the TERM value ntrecord declares.
 const Term = "xterm-ghostty"
 
 // entry is Term compiled by tic -x from xterm-ghostty.terminfo, kept beside it

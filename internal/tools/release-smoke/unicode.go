@@ -75,11 +75,11 @@ func verifyUnicode(ctx context.Context, bin, dir string) error {
 
 func runUnicodeCommand(cmd *exec.Cmd) error {
 	for _, env := range os.Environ() {
-		if !strings.HasPrefix(env, "SIGMAMAX_FONT_PATH=") {
+		if !strings.HasPrefix(env, "NTRECORD_FONT_PATH=") {
 			cmd.Env = append(cmd.Env, env)
 		}
 	}
-	cmd.Env = append(cmd.Env, "SIGMAMAX_FONT_PATH=")
+	cmd.Env = append(cmd.Env, "NTRECORD_FONT_PATH=")
 	if output, err := cmd.CombinedOutput(); err != nil {
 		return fmt.Errorf("%w: %s", err, output)
 	}

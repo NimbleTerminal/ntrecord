@@ -1,4 +1,4 @@
-# sha256 of each golden frame (see golden_frames_test.go); regenerate with SIGMAMAX_UPDATE_GOLDEN=1
+# sha256 of each golden frame (see golden_frames_test.go); regenerate with NTRECORD_UPDATE_GOLDEN=1
 box-blocks-braille-wide e09212d59f28011b82b24d0c77a4d7db70d111bf2654131e9c2b187d67db8123
 cursor-bar 5e92902d40f845788f0d64d7aba03b862a8e391e33e15f62cf8ae56f5d8de049
 cursor-block 9e02a1723e472e1a473b3c51a139ba976173fa9fb518dfcdf420f13d8733c81f

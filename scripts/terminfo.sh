@@ -1,7 +1,7 @@
 #!/bin/sh
 # Regenerate internal/terminfo from the pinned Ghostty revision: the terminfo
 # source Ghostty itself would install (written by its own Zig definitions), and
-# the portable compiled entry that sigmamax embeds. Run after bumping
+# the portable compiled entry that ntrecord embeds. Run after bumping
 # ghostty_revision in scripts/native-common.sh; needs tic (ncurses) as well.
 set -eu
 root=$(CDPATH= cd -- "$(dirname -- "$0")/.." && pwd)

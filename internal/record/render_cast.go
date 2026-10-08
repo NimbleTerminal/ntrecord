@@ -9,10 +9,10 @@ import (
 	"strconv"
 	"time"
 
-	"github.com/NimbleMarkets/sigmamax/internal/asciicast"
-	"github.com/NimbleMarkets/sigmamax/internal/encode"
-	"github.com/NimbleMarkets/sigmamax/internal/render"
-	"github.com/NimbleMarkets/sigmamax/internal/tape"
+	"nimbleterminal.dev/ntrecord/internal/asciicast"
+	"nimbleterminal.dev/ntrecord/internal/encode"
+	"nimbleterminal.dev/ntrecord/internal/render"
+	"nimbleterminal.dev/ntrecord/internal/tape"
 )
 
 // RenderCast renders events without running a shell or waiting for wall time.

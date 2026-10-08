@@ -1,4 +1,4 @@
-// Exercise an extracted release binary without compiling sigmamax or linking
+// Exercise an extracted release binary without compiling ntrecord or linking
 // libghostty on the test machine. Only the Go standard library is needed.
 package main
 
@@ -27,7 +27,7 @@ func main() {
 
 func run() error {
 	if len(os.Args) != 2 {
-		return fmt.Errorf("usage: release-smoke /path/to/sigmamax")
+		return fmt.Errorf("usage: release-smoke /path/to/ntrecord")
 	}
 	bin, err := filepath.Abs(os.Args[1])
 	if err != nil {
@@ -36,10 +36,10 @@ func run() error {
 	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
 	defer cancel()
 	version, err := exec.CommandContext(ctx, bin, "--version").CombinedOutput()
-	if err != nil || !strings.HasPrefix(string(version), "sigmamax v") {
+	if err != nil || !strings.HasPrefix(string(version), "ntrecord v") {
 		return fmt.Errorf("release version missing: %s (%v)", version, err)
 	}
-	dir, err := os.MkdirTemp("", "sigmamax-release-smoke-")
+	dir, err := os.MkdirTemp("", "ntrecord-release-smoke-")
 	if err != nil {
 		return err
 	}

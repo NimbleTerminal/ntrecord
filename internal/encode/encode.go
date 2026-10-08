@@ -17,7 +17,7 @@ import (
 	"syscall"
 	"time"
 
-	"github.com/NimbleMarkets/sigmamax/internal/gifencode"
+	"nimbleterminal.dev/ntrecord/internal/gifencode"
 )
 
 // Extensions lists every output file extension Format accepts.
@@ -42,7 +42,7 @@ func Format(path string) (string, error) {
 
 // Preflight reports whether path can be written, without creating anything.
 // Video needs FFmpeg on PATH built with the format's encoder; it returns
-// FFmpeg's path then, and an empty string for outputs sigmamax writes itself.
+// FFmpeg's path then, and an empty string for outputs ntrecord writes itself.
 func Preflight(path string) (ffmpeg string, err error) {
 	format, err := Format(path)
 	if err != nil {
@@ -176,7 +176,7 @@ func NewWithOptions(path string, width, height int, opts Options) (*Encoder, err
 		if err = os.MkdirAll(filepath.Dir(e.path), 0755); err != nil {
 			return nil, err
 		}
-		e.temporary, err = os.MkdirTemp(filepath.Dir(e.path), ".sigmamax-frames-*")
+		e.temporary, err = os.MkdirTemp(filepath.Dir(e.path), ".ntrecord-frames-*")
 		if err != nil {
 			return nil, err
 		}
@@ -426,7 +426,7 @@ func (e *Encoder) tempFile() (*os.File, error) {
 	if err := os.MkdirAll(filepath.Dir(e.path), 0755); err != nil {
 		return nil, err
 	}
-	f, err := os.CreateTemp(filepath.Dir(e.path), ".sigmamax-*")
+	f, err := os.CreateTemp(filepath.Dir(e.path), ".ntrecord-*")
 	if err == nil {
 		e.temporary = f.Name()
 	}

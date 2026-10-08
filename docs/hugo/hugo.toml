@@ -1,5 +1,5 @@
-baseURL = "https://nimblemarkets.github.io/sigmamax/"
-title = "sigmamax"
+baseURL = "https://nimbleterminal.github.io/ntrecord/"
+title = "ntrecord"
 theme = "hugo-book"
 contentDir = "content"
 
@@ -16,7 +16,7 @@ enableGitInfo = false
   # one say bookToC: false in their front matter.
   BookToC = true
   BookSection = "*"
-  BookRepo = "https://github.com/NimbleMarkets/sigmamax"
+  BookRepo = "https://github.com/NimbleTerminal/ntrecord"
   BookEditPath = "edit/main/docs/hugo"
   BookDateFormat = "January 2, 2006"
   BookSearch = true

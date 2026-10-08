@@ -1,4 +1,4 @@
-module github.com/NimbleMarkets/sigmamax
+module nimbleterminal.dev/ntrecord
 
 go 1.26.0
 

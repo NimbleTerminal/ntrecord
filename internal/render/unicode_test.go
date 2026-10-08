@@ -12,7 +12,7 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/NimbleMarkets/sigmamax/internal/tape"
+	"nimbleterminal.dev/ntrecord/internal/tape"
 )
 
 func TestBrailleDotsAndCellEdges(t *testing.T) {
@@ -80,7 +80,7 @@ func TestBrailleDotsAndCellEdges(t *testing.T) {
 	}
 }
 func TestClusterFallbackAndShaping(t *testing.T) {
-	t.Setenv("SIGMAMAX_FONT_PATH", "")
+	t.Setenv("NTRECORD_FONT_PATH", "")
 	a, err := newAtlasFamily(24, "Go Mono")
 	if err != nil {
 		t.Fatal(err)
@@ -127,7 +127,7 @@ func TestClusterFallbackAndShaping(t *testing.T) {
 	}
 }
 func TestUnicodeRenderer(t *testing.T) {
-	t.Setenv("SIGMAMAX_FONT_PATH", "")
+	t.Setenv("NTRECORD_FONT_PATH", "")
 	c := tape.DefaultConfig()
 	c.Cols, c.Rows, c.FontSize = 64, 14, 24
 	r, err := New(c)
@@ -147,7 +147,7 @@ func TestUnicodeRenderer(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if dir := os.Getenv("SIGMAMAX_GOLDEN_DUMP"); dir != "" {
+	if dir := os.Getenv("NTRECORD_GOLDEN_DUMP"); dir != "" {
 		if err = os.MkdirAll(dir, 0755); err != nil {
 			t.Fatal(err)
 		}
@@ -170,7 +170,7 @@ func TestFallbackCatalogUsesConfiguredFonts(t *testing.T) {
 	if err := os.WriteFile(filepath.Join(dir, "broken.ttf"), []byte("not a font"), 0600); err != nil {
 		t.Fatal(err)
 	}
-	t.Setenv("SIGMAMAX_FONT_PATH", dir)
+	t.Setenv("NTRECORD_FONT_PATH", dir)
 	var catalog fallbackCatalog
 	f := catalog.resolve([]rune("♞"), 24, true, true)
 	if f == nil || !covers(f.face.Cmap, []rune("♞")) {
@@ -188,7 +188,7 @@ func TestInstalledCJKFallback(t *testing.T) {
 	if _, err := os.Stat(path); err != nil {
 		t.Skip("optional installed CJK font not available")
 	}
-	t.Setenv("SIGMAMAX_FONT_PATH", path)
+	t.Setenv("NTRECORD_FONT_PATH", path)
 	a, err := newAtlasFamily(24, "Go Mono")
 	if err != nil {
 		t.Fatal(err)
@@ -207,7 +207,7 @@ func TestInstalledCJKFallback(t *testing.T) {
 	}
 }
 func TestEmojiGridAndVariationSelectors(t *testing.T) {
-	t.Setenv("SIGMAMAX_FONT_PATH", "")
+	t.Setenv("NTRECORD_FONT_PATH", "")
 	c := tape.DefaultConfig()
 	c.Cols, c.Rows = 32, 3
 	r, err := New(c)
@@ -249,7 +249,7 @@ func (r *Renderer) stateCursorForTest() (int, error) {
 }
 
 func TestClusterStreamingWrapAndErase(t *testing.T) {
-	t.Setenv("SIGMAMAX_FONT_PATH", "")
+	t.Setenv("NTRECORD_FONT_PATH", "")
 	c := tape.DefaultConfig()
 	c.Cols, c.Rows = 8, 3
 	whole, err := New(c)
@@ -307,7 +307,7 @@ func TestClusterStreamingWrapAndErase(t *testing.T) {
 }
 
 func TestUnicodeResourceLimits(t *testing.T) {
-	t.Setenv("SIGMAMAX_FONT_PATH", "")
+	t.Setenv("NTRECORD_FONT_PATH", "")
 	a, err := newAtlasFamily(96, "Go Mono")
 	if err != nil {
 		t.Fatal(err)
@@ -335,7 +335,7 @@ func TestUnicodeResourceLimits(t *testing.T) {
 	if _, err := readFont(path, int64(len(symbolsFont)-1)); err == nil {
 		t.Fatal("font source limit ignored")
 	}
-	t.Setenv("SIGMAMAX_FONT_PATH", path)
+	t.Setenv("NTRECORD_FONT_PATH", path)
 	var catalog fallbackCatalog
 	catalog.scan()
 	catalog.bytes = 128 << 20
@@ -361,7 +361,7 @@ func TestDoubleLineJunctionGaps(t *testing.T) {
 }
 
 func BenchmarkUnicodeFrame(b *testing.B) {
-	b.Setenv("SIGMAMAX_FONT_PATH", "")
+	b.Setenv("NTRECORD_FONT_PATH", "")
 	c := tape.DefaultConfig()
 	c.Cols, c.Rows = 80, 24
 	r, err := New(c)
@@ -392,7 +392,7 @@ func TestFallbackSkipsUnreadableCandidate(t *testing.T) {
 			t.Fatal(err)
 		}
 	}
-	t.Setenv("SIGMAMAX_FONT_PATH", dir)
+	t.Setenv("NTRECORD_FONT_PATH", dir)
 	var c fallbackCatalog
 	c.scan()
 	if err := os.Remove(filepath.Join(dir, "0.ttf")); err != nil {

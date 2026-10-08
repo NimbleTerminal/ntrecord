@@ -1,12 +1,12 @@
 # Tape language
 
-sigmamax runs the VHS tape language on its own renderer. Scripts carry over, but fonts, anti-aliasing, window decoration, and encoded pixels are sigmamax's own and do not match VHS screenshots.
+ntrecord runs the VHS tape language on its own renderer. Scripts carry over, but fonts, anti-aliasing, window decoration, and encoded pixels are ntrecord's own and do not match VHS screenshots.
 
 **Only run tapes you trust.** A tape runs real programs: `Set Shell`, `Type`, and `Env` execute commands with your privileges, and `Output`, `Source`, and `Screenshot` read and write files wherever the path points, as in VHS.
 
 ## Paths and sources
 
-Run a tape from the directory it expects. Shell commands, output paths, font paths, and `Source` paths are all resolved from the directory you ran sigmamax in, including inside sourced tapes. A `Source` cycle, or nesting deeper than 32 files, is an error.
+Run a tape from the directory it expects. Shell commands, output paths, font paths, and `Source` paths are all resolved from the directory you ran ntrecord in, including inside sourced tapes. A `Source` cycle, or nesting deeper than 32 files, is an error.
 
 Following VHS, `Output` lines inside a sourced tape are ignored, so a shared tape cannot redirect the caller's recording. Repeat `Output` in the top-level tape to write several files from one session. Each file is replaced only after it encodes successfully.
 
@@ -53,7 +53,7 @@ Screenshot demo.png
 
 ## Syntax
 
-- Single quotes, double quotes, and backticks keep their contents literally, shell backslashes included. To put a quote inside, use a different delimiter. This matches VHS and replaces sigmamax's original Go-style escaping of double quotes.
+- Single quotes, double quotes, and backticks keep their contents literally, shell backslashes included. To put a quote inside, use a different delimiter. This matches VHS and replaces ntrecord's original Go-style escaping of double quotes.
 - Regex literals may contain escaped slashes. Themes may be multiline JSON objects.
 - `#` starts a comment outside a literal. Several commands may share a line.
 
@@ -69,7 +69,7 @@ Controls are ordered after any output already queued from the program, so a cont
 
 `Hide` records the last visible screen, even in the middle of synchronized output, then stops recording. `Show` resumes from the current screen. Neither waits for a running command, so put a `Wait` before them when the command must finish first.
 
-At the end of a successful tape, sigmamax waits for the output to go quiet (100 ms of silence, one second at most). Use `Wait` or `Sleep` for commands that need longer. Finishing the tape closes the PTY and stops the shell.
+At the end of a successful tape, ntrecord waits for the output to go quiet (100 ms of silence, one second at most). Use `Wait` or `Sleep` for commands that need longer. Finishing the tape closes the PTY and stops the shell.
 
 ## Settings
 
@@ -101,7 +101,7 @@ Capture runs at the configured framerate. GIF merges identical neighboring frame
 
 PNG frames are numbered `000001.png`, `000002.png`, and so on. The destination must be absent or empty, so existing frames are never deleted.
 
-Text outputs hold the screen's text after each visible action, but only when it changed, plus the final screen, separated by a rule. Put a `Wait` before any checkpoint that depends on late output. They make readable golden files, in sigmamax's own format.
+Text outputs hold the screen's text after each visible action, but only when it changed, plus the final screen, separated by a rule. Put a `Wait` before any checkpoint that depends on late output. They make readable golden files, in ntrecord's own format.
 
 To try the features, run `task demo:language` for a sourced, themed tape with clipboard use, keyboard editing, waits, several outputs, and a screenshot. `task demo:kitty` draws a PNG through direct Kitty transfer and waits for `go run` with `Wait+Screen`.
 
@@ -110,10 +110,10 @@ To try the features, run `task demo:language` for a sourced, themed tape with cl
 By default a recording samples the screen on the wall clock (`realtime`). That captures whatever a program does, animations included, but two runs of one tape differ, and slow encoding can stretch the recording past the script. For a virtual clock, pass `-mode deterministic`:
 
 ```sh
-sigmamax -mode deterministic demo.tape
+ntrecord -mode deterministic demo.tape
 ```
 
-After every step, sigmamax lets the program settle: 30 ms of silence, or one second at most. The first step also waits for any output, so a slow shell is not recorded before its prompt appears. Then the screen is held for exactly the time the tape names: the typing interval after each key, or the duration of a `Sleep`, divided by `PlaybackSpeed`.
+After every step, ntrecord lets the program settle: 30 ms of silence, or one second at most. The first step also waits for any output, so a slow shell is not recorded before its prompt appears. Then the screen is held for exactly the time the tape names: the typing interval after each key, or the duration of a `Sleep`, divided by `PlaybackSpeed`.
 
 The results:
 
@@ -121,7 +121,7 @@ The results:
 - `Sleep 5s` costs no real time.
 - Hidden time is left out, as usual, and a blinking cursor still blinks.
 
-The cost is that a virtual clock does not wait for your program. A step that takes real time, such as a build, must end with `Wait+Screen /text/`, because a `Sleep` will not wait for it. If the screen is still changing when the tape ends, sigmamax says so on stderr.
+The cost is that a virtual clock does not wait for your program. A step that takes real time, such as a build, must end with `Wait+Screen /text/`, because a `Sleep` will not wait for it. If the screen is still changing when the tape ends, ntrecord says so on stderr.
 
 Programs that animate on their own, such as spinners and shaders, need `realtime`, and so does a live `record` session, which follows a person's clock. Typing is limited by the settle window and by encoding each distinct frame, so a tape that mostly types is not much faster than real time. A tape that sleeps or waits is.
 

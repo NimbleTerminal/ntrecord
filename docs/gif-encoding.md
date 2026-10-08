@@ -152,7 +152,7 @@ LoopOffsets. It covers disappearance, replacement, transparency, opaque fallback
 when every palette entry is needed, exact backgrounds beside gradients, late
 application colors, deterministic palettes, source compression limits, huge hold
 metadata, strided inputs and cumulative timing. Existing delay-overflow and theme
-seed tests remain. CI sets `SIGMAMAX_REQUIRE_FFMPEG=1`, so composition checks cannot
+seed tests remain. CI sets `NTRECORD_REQUIRE_FFMPEG=1`, so composition checks cannot
 silently skip when FFmpeg is missing.
 
 ## Reproduce
@@ -188,7 +188,7 @@ not the independent correctness oracle; use FFmpeg for that:
 ffmpeg -v error -ignore_loop 1 -min_delay 0 -i /tmp/before.gif -fps_mode passthrough -pix_fmt rgba -f framemd5 /tmp/before.md5
 ffmpeg -v error -ignore_loop 1 -min_delay 0 -i /tmp/after.gif -fps_mode passthrough -pix_fmt rgba -f framemd5 /tmp/after.md5
 diff /tmp/before.md5 /tmp/after.md5
-SIGMAMAX_REQUIRE_FFMPEG=1 task ci
+NTRECORD_REQUIRE_FFMPEG=1 task ci
 ```
 
 Hash comparison applies to palette-preserving fixtures/delta references. Compare

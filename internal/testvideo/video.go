@@ -11,7 +11,7 @@ func Require(t *testing.T) {
 	t.Helper()
 	for _, name := range []string{"ffmpeg", "ffprobe"} {
 		if _, err := exec.LookPath(name); err != nil {
-			if os.Getenv("SIGMAMAX_REQUIRE_FFMPEG") == "1" {
+			if os.Getenv("NTRECORD_REQUIRE_FFMPEG") == "1" {
 				t.Fatalf("video tests require %s on PATH", name)
 			}
 			t.Skipf("%s unavailable; use task test:video to require video tests", name)

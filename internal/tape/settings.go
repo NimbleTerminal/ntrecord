@@ -7,7 +7,7 @@ import (
 	"strconv"
 	"strings"
 
-	"github.com/NimbleMarkets/sigmamax/internal/theme"
+	"nimbleterminal.dev/ntrecord/internal/theme"
 )
 
 func (p *parser) setting(key, value string) error {

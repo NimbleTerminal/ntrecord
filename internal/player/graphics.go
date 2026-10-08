@@ -10,7 +10,7 @@ import (
 	"strings"
 	"time"
 
-	"github.com/NimbleMarkets/sigmamax/internal/playback"
+	"nimbleterminal.dev/ntrecord/internal/playback"
 )
 
 // Alternate image IDs: a chunked upload never removes the currently visible

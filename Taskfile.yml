@@ -28,30 +28,30 @@ tasks:
     desc: Regenerate internal/terminfo from the pinned Ghostty revision (needs tic)
     cmds: ['sh scripts/terminfo.sh']
   build:
-    desc: Build bin/sigmamax
+    desc: Build bin/ntrecord
     deps: [native-check]
     # Let Go handle caching: native libraries, compiler flags, and workspace
     # dependencies can change outside Task's source globs.
     env:
-      SIGMAMAX_VERSION: '{{.VERSION}}'
-    cmds: ['go build -mod=readonly -trimpath -ldflags "-X main.version=$SIGMAMAX_VERSION" -o bin/sigmamax .']
+      NTRECORD_VERSION: '{{.VERSION}}'
+    cmds: ['go build -mod=readonly -trimpath -ldflags "-X main.version=$NTRECORD_VERSION" -o bin/ntrecord .']
   run:
-    desc: Run sigmamax (pass a tape path or CLI arguments after --)
+    desc: Run ntrecord (pass a tape path or CLI arguments after --)
     interactive: true
     deps: [build]
-    cmds: ['bin/sigmamax {{.CLI_ARGS}}']
+    cmds: ['bin/ntrecord {{.CLI_ARGS}}']
   play:
     desc: Play an asciicast in a Kitty-capable terminal
     interactive: true
     deps: [build]
-    cmds: ['bin/sigmamax play {{.CLI_ARGS}}']
+    cmds: ['bin/ntrecord play {{.CLI_ARGS}}']
   record:
     desc: Record a live PTY (pass recorder flags and command after --)
     interactive: true
     deps: [build]
-    cmds: ['bin/sigmamax record {{.CLI_ARGS}}']
+    cmds: ['bin/ntrecord record {{.CLI_ARGS}}']
   install:
-    desc: Install sigmamax into the Go bin directory
+    desc: Install ntrecord into the Go bin directory
     deps: [native-check]
     cmds: [go install -mod=readonly -trimpath .]
   clean:
@@ -89,7 +89,7 @@ tasks:
     desc: Require FFmpeg and run video encoder and PTY integration tests
     deps: [native-check, video-check]
     env:
-      SIGMAMAX_REQUIRE_FFMPEG: '1'
+      NTRECORD_REQUIRE_FFMPEG: '1'
     cmds: ['go test -mod=readonly {{.CLI_ARGS}} . ./internal/encode']
   test:shaders:
     desc: Record ntcharts shaders and check every GIF frame (requires GPU and SHADERS_BIN)
@@ -97,8 +97,8 @@ tasks:
       vars: [SHADERS_BIN]
     deps: [native-check]
     env:
-      SIGMAMAX_SHADER_BIN: '{{.SHADERS_BIN}}'
-      SIGMAMAX_SHADER_OUTPUT: '{{.OUTPUT | default "examples/shaders.gif"}}'
+      NTRECORD_SHADER_BIN: '{{.SHADERS_BIN}}'
+      NTRECORD_SHADER_OUTPUT: '{{.OUTPUT | default "examples/shaders.gif"}}'
     cmds: [go test -mod=readonly -count=1 -run '^TestNTChartsShaderContinuity$' -v .]
   test:golden:
     desc: Check the renderer's golden frames, as CI does on four platforms (see docs/development.md)
@@ -128,15 +128,15 @@ tasks:
   demo:kitty:
     desc: Record examples/kitty.gif (direct PNG with a query handshake)
     deps: [build]
-    cmds: [bin/sigmamax examples/kitty.tape]
+    cmds: [bin/ntrecord examples/kitty.tape]
   demo:text:
     desc: Record examples/text.gif
     deps: [build]
-    cmds: [bin/sigmamax examples/text.tape]
+    cmds: [bin/ntrecord examples/text.tape]
   demo:placeholder:
     desc: Record examples/kitty-placeholder.gif (ntcharts-style Unicode placements)
     deps: [build]
-    cmds: [bin/sigmamax examples/kitty-placeholder.tape]
+    cmds: [bin/ntrecord examples/kitty-placeholder.tape]
   demos:
     desc: Record the example GIFs
     cmds:
@@ -147,12 +147,12 @@ tasks:
     desc: Record Kitty graphics to MP4 and WebM (requires FFmpeg)
     deps: [build, video-check]
     cmds:
-      - bin/sigmamax examples/kitty-mp4.tape
-      - bin/sigmamax examples/kitty-webm.tape
+      - bin/ntrecord examples/kitty-mp4.tape
+      - bin/ntrecord examples/kitty-webm.tape
   demo:language:
     desc: Record the VHS language demo, text checkpoints, and PNG screenshot
     deps: [build]
-    cmds: [bin/sigmamax examples/language.tape]
+    cmds: [bin/ntrecord examples/language.tape]
 
   docs:hugo:serve:
     desc: Serve the user guide while editing it (needs hugo, extended; run `git submodule update --init` once)

@@ -1,4 +1,4 @@
-// A tiny direct-PNG Kitty client. Run under sigmamax or a Kitty-capable terminal.
+// A tiny direct-PNG Kitty client. Run under ntrecord or a Kitty-capable terminal.
 package main
 
 import (
@@ -66,7 +66,7 @@ func run() error {
 	if err := png.Encode(&b, im); err != nil {
 		return err
 	}
-	fmt.Print("\x1b[?2026h\x1b[2J\x1b[H\x1b[?25l\x1b[1;36msigmamax\x1b[0m  /  Kitty graphics in a GIF\r\n\r\n")
+	fmt.Print("\x1b[?2026h\x1b[2J\x1b[H\x1b[?25l\x1b[1;36mntrecord\x1b[0m  /  Kitty graphics in a GIF\r\n\r\n")
 	options := ""
 	if *virtual {
 		options = ",U=1,c=12,r=6"

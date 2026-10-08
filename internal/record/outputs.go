@@ -10,9 +10,9 @@ import (
 	"path/filepath"
 	"time"
 
-	"github.com/NimbleMarkets/sigmamax/internal/encode"
-	"github.com/NimbleMarkets/sigmamax/internal/render"
-	"github.com/NimbleMarkets/sigmamax/internal/tape"
+	"nimbleterminal.dev/ntrecord/internal/encode"
+	"nimbleterminal.dev/ntrecord/internal/render"
+	"nimbleterminal.dev/ntrecord/internal/tape"
 )
 
 type outputs struct {
@@ -105,7 +105,7 @@ func writeAtomic(path string, write func(io.Writer) error) error {
 	if err := os.MkdirAll(filepath.Dir(path), 0755); err != nil {
 		return err
 	}
-	f, err := os.CreateTemp(filepath.Dir(path), ".sigmamax-*")
+	f, err := os.CreateTemp(filepath.Dir(path), ".ntrecord-*")
 	if err != nil {
 		return err
 	}

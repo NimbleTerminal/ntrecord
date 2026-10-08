@@ -13,7 +13,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/NimbleMarkets/sigmamax/internal/testvideo"
+	"nimbleterminal.dev/ntrecord/internal/testvideo"
 )
 
 func TestConfiguredFramerate(t *testing.T) {
