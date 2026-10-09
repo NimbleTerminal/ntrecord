@@ -17,5 +17,8 @@ if [ ! -d "$deps/ghostty-$ghostty_revision" ]; then
     rmdir "$unpack"
 fi
 cd "$deps/ghostty-$ghostty_revision"
+# This source archive has no Git metadata. Do not let Ghostty discover the
+# enclosing ntrecord checkout and mistake our release tag for its own version.
+export GIT_CEILING_DIRECTORIES="$deps"
 "$zig" build -Demit-lib-vt -Demit-xcframework=false -Doptimize=ReleaseFast --global-cache-dir "$deps/zig-cache" --prefix "$prefix" "$@"
 printf '\nBuilt libghostty-vt. Set PKG_CONFIG_PATH to %s/share/pkgconfig\n' "$prefix"
