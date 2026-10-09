@@ -93,6 +93,14 @@ Full command and setting tables: `docs/tapes.md` in the repo
   `Set WaitTimeout 90s` for slow commands.
 - A timeout error prints the pattern and the last screen text. Read it; the
   fix is almost always the pattern or the timeout.
+- If the program emits OSC 7501 status (an agent or build tool that
+  reports `idle|working|done|blocked|error`), wait on that instead of text:
+  `Wait+Status@60s done app=build id=tests` (filters `app=`, `id=`, `kind=`;
+  `kind=` only with `blocked`: `permission|question|auth`). It matches
+  *current* state, including status sent before the wait, so use a distinct
+  `id` or have the program clear old `done` records when repeating a task.
+  Timeouts are real time even in deterministic mode. Programs that don't emit
+  OSC 7501 still need text waits.
 - The tape ends when its last command does, after at most 1s of output
   quiet. Finish with `Wait` or `Sleep` if the tail matters.
 
@@ -124,19 +132,21 @@ ntrecord render session.cast -o s.mp4 -fps 30 -speed 2 -theme "Dracula"
 
 ## Fonts, Unicode, Kitty graphics
 
-- Built in: Go Mono. Coverage of symbols, emoji, braille and CJK depends on
-  the ntrecord version (fallback fonts are evolving), so for anything beyond
-  plain text, check `docs/rendering.md` (or the project's current docs) and
-  record a quick `Screenshot` rather than assuming. If a glyph comes out as a
-  replacement mark, choose a font that has it: `Set FontFamily "Name"` or a
+- Built in: Go Mono, with bundled Noto Symbols 2 and Noto Color Emoji as
+  fallbacks, then installed fonts that cover a whole grapheme cluster. Box
+  drawing, blocks and braille are drawn geometrically. CJK and other scripts
+  need an installed outline font. Details: `docs/rendering.md`. Older
+  builds lacked fallbacks, so for anything beyond plain text record a quick
+  `Screenshot` rather than assuming. If a glyph comes out as a replacement
+  mark, choose a font that has it: `Set FontFamily "Name"` or a
   `.ttf`/`.otf`/`.ttc` path (`-font` for `render` and `play`; `record` has no
   `-font`, so record a `.cast` and `render` it). A path font is used for every
   style (no distinct bold/italic); a named family picks its own variants.
   `validate` loads the font, so a bad name or path fails before recording.
   Details: guide page "Using your own font"
   (https://nimbleterminal.github.io/ntrecord/guide/fonts/).
-- Newer builds look up installed fallback fonts; `NTRECORD_FONT_PATH=""`
-  restricts that to bundled fonts for machine-independent output.
+- `NTRECORD_FONT_PATH=""` limits fallback to the bundled fonts, for
+  machine-independent output.
 - Programs see `TERM=xterm-ghostty`, `TERM_PROGRAM=ntrecord`. Kitty graphics
   work for **direct** transfer (PNG/RGB/RGBA, placements, Unicode
   placeholders). File and shared-memory transfer, animation frames, and
