@@ -623,9 +623,7 @@ func Run(parent context.Context, opts Options) error {
 	// The screen now should be the last frame held. If it is not, the program drew
 	// after the tape's final step (a virtual Sleep does not wait for it).
 	if virtual && visible && runErr == nil && opts.Warn != nil && !opts.Config.CursorBlink && lastEmitted != nil {
-		if f, err := r.FrameAfter(recorded); err == nil && !bytes.Equal(f.Pix, lastEmitted.Pix) {
-			fmt.Fprintln(opts.Warn, "ntrecord: warning: the program was still producing output when the tape ended, and a deterministic recording does not wait for it: Sleep is virtual time. End slow steps with Wait+Screen /text/.")
-		}
+		warnUncapturedOutput(r, recorded, lastEmitted, opts.Warn)
 	}
 	if virtual {
 		// Hold the last viewport for a beat, as realtime does.
@@ -641,6 +639,12 @@ func Run(parent context.Context, opts Options) error {
 		encoder.castTime = time.Duration(float64(time.Since(castStart)) / speed)
 	}
 	return errors.Join(runErr, encoder.Finish())
+}
+
+func warnUncapturedOutput(r *render.Renderer, at time.Duration, last *image.RGBA, out io.Writer) {
+	if f, err := r.FrameAfter(at); err == nil && !bytes.Equal(f.Pix, last.Pix) {
+		fmt.Fprintln(out, "ntrecord: warning: the program was still producing output when the tape ended, and a deterministic recording does not wait for it: Sleep is virtual time. End slow steps with Wait+Screen /text/.")
+	}
 }
 
 func play(ctx context.Context, actions []tape.Action, events chan<- event, virtual bool) error {

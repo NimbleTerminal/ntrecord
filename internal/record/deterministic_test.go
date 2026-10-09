@@ -13,6 +13,7 @@ import (
 	"time"
 
 	"nimbleterminal.dev/ntrecord/internal/tape"
+	"nimbleterminal.dev/ntrecord/render"
 )
 
 // runDeterministic records a tape in deterministic mode and returns the GIF
@@ -128,6 +129,29 @@ func TestDeterministicNeedsATape(t *testing.T) {
 // A virtual Sleep does not wait for a slow program, so a recording that ends
 // while the program is still drawing has missed it. Say so.
 func TestDeterministicWarnsWhenOutputOutlastsTheTape(t *testing.T) {
+	// Drive the capture boundary explicitly. A delayed shell echo can land
+	// before the last capture on a busy runner, correctly producing no warning.
+	r, err := render.New(render.DefaultConfig())
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer r.Close()
+	last, err := r.FrameAfter(0)
+	if err != nil {
+		t.Fatal(err)
+	}
+	var warning bytes.Buffer
+	warnUncapturedOutput(r, 0, last, &warning)
+	if warning.Len() != 0 {
+		t.Fatal("unchanged viewport warned")
+	}
+	if err := r.Write([]byte("late output")); err != nil {
+		t.Fatal(err)
+	}
+	warnUncapturedOutput(r, 0, last, &warning)
+	if !strings.Contains(warning.String(), "still producing output") || !strings.Contains(warning.String(), "Wait") {
+		t.Fatalf("missing late-output warning: %q", warning.String())
+	}
 	record := func(actions string) string {
 		t.Helper()
 		path := filepath.Join(t.TempDir(), "out.gif")
@@ -143,10 +167,6 @@ func TestDeterministicWarnsWhenOutputOutlastsTheTape(t *testing.T) {
 			t.Fatal(err)
 		}
 		return warn.String()
-	}
-	late := record("Type \"(sleep 0.12; echo late) &\"\nEnter\nSleep 50ms\n")
-	if !strings.Contains(late, "still producing output") || !strings.Contains(late, "Wait") {
-		t.Errorf("no warning for a program that outlasted the tape: %q", late)
 	}
 	if quiet := record("Type \"echo done\"\nEnter\nWait+Screen /(?m)^done$/\nSleep 200ms\n"); quiet != "" {
 		t.Errorf("warned about a tape that waited properly: %q", quiet)
