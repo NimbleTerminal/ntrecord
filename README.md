@@ -176,6 +176,8 @@ See [library APIs and build instructions](docs/libraries.md).
 - The [user guide](https://nimbleterminal.github.io/ntrecord/): installing, a first recording, tapes, appearance, output formats, recording images, and troubleshooting.
 - [docs/tapes.md](docs/tapes.md): the tape language, commands, settings, and capture timing.
 - [docs/rendering.md](docs/rendering.md): fonts, the renderer, and the supported Kitty graphics.
+- [docs/libraries.md](docs/libraries.md): the public Go packages for GIF encoding, asciicast streams, and rendering.
+- [docs/gif-encoding.md](docs/gif-encoding.md): how GIFs are optimized, with limits and benchmarks.
 - [docs/development.md](docs/development.md): building from source, tests and CI, and releases.
 
 ## Acknowledgements

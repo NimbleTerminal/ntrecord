@@ -40,7 +40,27 @@ ntrecord starts the shell with a simple prompt, but a shell's startup files can 
 
 ## A character shows as a replacement mark or is missing
 
-The built-in font, Go Mono, has no icon-font symbols, braille patterns, rounded box corners, CJK text, or emoji, and ntrecord does not fall back to another font. Use `Set FontFamily` with a font that has them (an installed family, or a `.ttf`/`.otf` file).
+Go Mono is the primary font. Symbols, braille, box drawing, and color emoji come from built-in fallbacks, and other text from installed fonts that cover it. Icon-font (Nerd Font) symbols, CJK, and other scripts show a replacement mark unless a font that has them is installed. Name one with `Set FontFamily` (an installed family, or a `.ttf`/`.otf`/`.ttc` file); see [Using your own font](../fonts/). Fallback coverage can differ between machines; `NTRECORD_FONT_PATH=` (empty) restricts it to the bundled fonts.
+
+## A font name is "not found"
+
+`font family "X" not found` means no installed font has that family or full name in the standard font folders. Check the spelling, or point `Set FontFamily` at the `.ttf`/`.otf` file. `ntrecord validate` reports this without recording. See [Using your own font](../fonts/).
+
+## ".cast output does not support Hide"
+
+A cast stores terminal events, so it cannot leave out hidden output or reproduce viewport scrolling. Tapes that use `Hide`, `ScrollUp`, or `ScrollDown` cannot have a `.cast` output. Remove the `.cast` `Output` (a GIF or video can still use `Hide`), or remove those commands.
+
+## "play needs an interactive terminal"
+
+`ntrecord play` shows frames through Kitty graphics, so it needs a real terminal such as Kitty or Ghostty, run directly (not through tmux). To get a file instead, use `ntrecord render session.cast -o session.gif`.
+
+## "Set Columns conflicts with Set Width"
+
+Choose the picture size in pixels (`Width`, `Height`) or the grid (`Columns`, `Rows`) for each direction, not both. See [How it looks](../appearance/).
+
+## `Wait+Status` times out
+
+The program must emit OSC 7501 status; one that does not will never match, so wait on screen text instead. The timeout message summarizes the status records ntrecord has seen: compare their state, `app`, `id`, and `kind` with your filters. Status already received counts, so a stale `done` can satisfy a later wait; use a distinct `id` or have the program clear it. See [Writing tapes](../tapes/#waiting).
 
 ## The GIF is huge
 

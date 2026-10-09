@@ -13,7 +13,7 @@ brew install --cask nimbleterminal/tap/ntrecord
 ntrecord --version
 ```
 
-The release is a single binary. It includes the terminal engine and a default font, so recording a GIF needs nothing else. Release archives and checksums are on the [releases page](https://github.com/NimbleTerminal/ntrecord/releases).
+The release is a single binary. It includes the terminal engine and default text, symbol, and color emoji fonts, so recording a GIF needs nothing else. Release archives and checksums are on the [releases page](https://github.com/NimbleTerminal/ntrecord/releases).
 
 ntrecord runs on macOS and Linux. There is no Windows build.
 

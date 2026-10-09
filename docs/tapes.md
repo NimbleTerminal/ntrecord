@@ -106,7 +106,7 @@ At the end of a successful tape, ntrecord waits for the output to go quiet (100 
 | Setting | Values and default |
 | --- | --- |
 | `Shell` | Executable name or path, started with `-i`. Default `/bin/sh`. |
-| `FontSize`, `FontFamily` | 6 to 96 pixels (default 18). `Go Mono` is built in; use an installed family name or a `.ttf`/`.otf` path for another. |
+| `FontSize`, `FontFamily` | 6 to 96 pixels (default 18). `Go Mono` is built in; use an installed family name or a `.ttf`/`.otf`/`.ttc` path for another ([details](https://nimbleterminal.github.io/ntrecord/guide/fonts/)). |
 | `Columns` (or `Cols`), `Rows` | Grid size. Default 80×24. |
 | `Width`, `Height` | Total output size in pixels, decoration included. Cannot be combined with `Columns` or `Rows` on the same axis. |
 | `LetterSpacing`, `LineHeight` | Extra pixels between letters (default 0), and a line-height multiplier (default 1). |

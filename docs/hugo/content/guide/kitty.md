@@ -24,7 +24,7 @@ The repository's `examples/kitty.tape` records a small program that shows an ima
 
 Animation frames, relative placements, and images sent through shared memory or files are not supported. If a program lets you choose how it sends images, choose direct transfer; an image sent through shared memory or a file will not be shown.
 
-Text is drawn with the built-in font, which has no braille patterns, rounded box corners, or CJK characters. A chart that draws with braille shows replacement marks unless you pick a font that has them with `Set FontFamily` (see [How it looks](../appearance/)).
+Braille, box drawing, block characters, symbols, and color emoji are drawn without any font setup, so charts that use them render. CJK and other scripts need an installed font; pick one with `Set FontFamily` (see [Using your own font](../fonts/)).
 
 ## Make the program use graphics
 

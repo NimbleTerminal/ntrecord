@@ -6,7 +6,7 @@ bookToC: false
 
 # ntrecord
 
-Record a terminal session to GIF, MP4, or WebM, including Kitty graphics. ntrecord runs your command in a real terminal, draws what it shows, and writes the result: no browser, no screen capture, no extra tools for GIFs.
+Record a terminal session to GIF, MP4, WebM, or asciicast, including Kitty graphics. ntrecord runs your command in a real terminal, draws what it shows, and writes the result: no browser, no screen capture, no extra tools for GIFs.
 
 ## Quick start
 
@@ -33,7 +33,7 @@ ntrecord reads the [VHS](https://github.com/charmbracelet/vhs) tape language, so
 ## Where to look
 
 - **[Guide](guide/)**: installing, your first recording, tapes, how a recording looks, the output formats, recording programs that show images, and fixing problems.
-- **[Reference docs](https://github.com/NimbleTerminal/ntrecord/tree/main/docs)** on GitHub: every tape command and setting, the renderer, and building from source.
+- **[Reference docs](https://github.com/NimbleTerminal/ntrecord/tree/main/docs)** on GitHub: every tape command and setting, the renderer, GIF encoding, the Go libraries, and building from source.
 
 ## Source
 

@@ -35,12 +35,12 @@ A theme can also set `cursor` and the sixteen ANSI colors (`black` through `brig
 | Setting | Does | Default |
 | --- | --- | --- |
 | `FontSize` | Text size in pixels, 6 to 96 | 18 |
-| `FontFamily` | `Go Mono` (built in), an installed font's name, or a `.ttf`/`.otf` path | `Go Mono` |
+| `FontFamily` | `Go Mono` (built in), an installed font's name, or a `.ttf`/`.otf`/`.ttc` path | `Go Mono` |
 | `LineHeight` | Line spacing multiplier | 1 |
 | `LetterSpacing` | Extra pixels between letters | 0 |
 | `CursorBlink` | `true` or `false` | `false` |
 
-To use a font you have installed, name its family (`Set FontFamily "JetBrains Mono"`) or point to the file (`Set FontFamily ./fonts/Mono.ttf`). There is no fallback font: a character the font lacks is drawn as a replacement glyph, and color emoji are not supported.
+To use a font you have installed, name its family (`Set FontFamily "JetBrains Mono"`) or point to the file (`Set FontFamily ./fonts/Mono.ttf`). Text the font lacks is drawn from built-in symbol and color emoji fonts, then from other installed fonts, before a replacement mark is shown. See [Using your own font](../fonts/).
 
 ## Size
 
