@@ -136,6 +136,14 @@ func Run(parent context.Context, opts Options) error {
 	if err != nil {
 		return fmt.Errorf("start PTY: %w", err)
 	}
+	master, err := pollablePTY(ptmx)
+	_ = ptmx.Close()
+	if err != nil {
+		_ = cmd.Process.Kill()
+		_ = cmd.Wait()
+		return fmt.Errorf("prepare PTY I/O: %w", err)
+	}
+	ptmx = master
 	castStart := time.Now()
 	exit := make(chan struct{})
 	var exitErr error
