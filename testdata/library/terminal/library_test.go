@@ -19,6 +19,17 @@ func TestRenderToGIF(t *testing.T) {
 		t.Fatal(err)
 	}
 	defer r.Close()
+	if err = r.Write([]byte("\x1b]7501;state=working:app=example\x1b\\")); err != nil {
+		t.Fatal(err)
+	}
+	statuses := r.ProgramStatuses()
+	if len(statuses) != 1 || statuses[0].State != "working" || statuses[0].App != "example" {
+		t.Fatalf("public status snapshot: %+v", statuses)
+	}
+	r.ProgramExited()
+	if len(r.ProgramStatuses()) != 0 || statuses[0].State != "working" {
+		t.Fatal("exit must clear active state without mutating snapshots")
+	}
 	if err = r.Write([]byte("\x1b[?25lé ♞ ┌─┐ ⣿ 👍🏽")); err != nil {
 		t.Fatal(err)
 	}

@@ -45,6 +45,7 @@ Screenshot demo.png
 | `ScrollUp 5`, `ScrollDown@100ms 5` | Scroll the viewport. The program is not told. |
 | `Sleep 0.5`, `Sleep 500ms`, `Sleep 500 ms` | Wait while recording continues. A bare number is seconds. |
 | `Wait`, `Wait+Line /regex/`, `Wait+Screen@5s /regex/` | Wait for text on screen, with an optional scope and timeout. |
+| `Wait+Status@30s done app=build id=tests` | Wait for a matching OSC 7501 program status. |
 | `Copy "text"`, `Paste` | Use a clipboard private to the recording. Paste honors bracketed-paste mode. |
 | `Hide`, `Show` | Stop and resume recording while the program keeps running. Hidden time is cut. |
 | `Screenshot path.png` | Save the current frame, with Kitty images and decoration, as a PNG. |
@@ -64,6 +65,35 @@ Screenshot demo.png
 Use a specific pattern whenever you can. Text you type is echoed on screen, so a broad pattern can match your own input. A timeout error reports the pattern and the last text it saw.
 
 Controls are ordered after any output already queued from the program, so a control cannot overtake output that arrived before it.
+
+Programs that report [OSC 7501 status](https://www.superlogical.com/rex/docs/build/program-status) can be synchronized without matching screen text:
+
+```tape
+Wait+Status@60s blocked app=agent id=review kind=question
+Type "yes"
+Enter
+Wait+Status@60s done app=agent id=review
+```
+
+`Wait+Status` requires `idle`, `working`, `done`, `blocked`, or `error`. Optional
+`app=`, `id=`, and `kind=` filters go on the same line and all match the same
+record exactly. Without an ID filter, any matching record counts; `id=` selects
+only the root record. App names inherit from the nearest ancestor. `kind=` is
+valid only with `blocked`, and accepts `permission`, `question`, or `auth`.
+The default timeout is `WaitTimeout`; `@time` overrides it. Timeouts use real
+time in both recording modes and report a bounded summary of current records.
+
+Waits check current state, including reports received before the wait began;
+they do not require a new transition. Use a distinct ID or have the program clear
+or replace its previous completion record when repeating a task. Working and
+blocked records clear on a new shell prompt or process exit; done and error
+persist. A full terminal reset clears everything. If the process exits with a
+status wait unfinished, recording fails and still finalizes its outputs.
+
+Status is captured unchanged in `.cast` output and is available through the
+renderer API. It adds no status bar or notifications and does not automatically
+stop recording, answer questions, or shorten pauses. Programs that do not emit
+OSC 7501 still need text waits.
 
 ## Hide and Show
 

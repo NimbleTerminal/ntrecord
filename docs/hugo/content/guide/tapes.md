@@ -68,6 +68,23 @@ Sleep 2s
 
 `Wait+Screen` looks at everything visible; `Wait+Line` (and plain `Wait`) looks at the line the cursor is on. The pattern is a [Go regular expression](https://pkg.go.dev/regexp/syntax). The default pattern, `[$>#]$`, matches a shell prompt, but it can also match text you typed, so use a specific pattern when it matters. If the wait times out, the error says what pattern it wanted and what was on screen.
 
+For programs that emit OSC 7501, use structured status instead:
+
+```tape
+Wait+Status@60s blocked app=agent kind=question
+Type "yes"
+Enter
+Wait+Status@60s done app=agent
+```
+
+States are `idle`, `working`, `done`, `blocked`, and `error`. Optional `app=`,
+`id=`, and `kind=` filters match one current record, including status received
+before the wait. `id=` selects the root; omitting it allows any record. `kind=`
+applies only to `blocked` and accepts `permission`, `question`, or `auth`.
+`WaitTimeout` and `@time` work as for screen waits, including in deterministic
+mode. Programs must replace or clear old completion records before repeating
+a task. Status remains invisible in GIF/video and is preserved in cast output.
+
 ## Keeping setup out of the picture
 
 `Hide` stops recording while the session keeps running; `Show` resumes. The time in between is cut out. Use it to get ready without showing it:

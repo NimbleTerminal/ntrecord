@@ -1,8 +1,8 @@
 # Shared by the native setup scripts. The caller supplies the repository root.
 zig_version=0.16.0
 pkgconf_version=2.5.1
-ghostty_revision=0e0ff282f72c92d930d41f4703547d3bc9618ba2
-ghostty_sha256=23a9ba8b578ee3c27bb5fef0130ffb1df9304eee7f264ed71b1e47e4a88ad559
+ghostty_revision=34f39002c6e3974b54e6a6d400bd83777c5ea558
+ghostty_sha256=932fede7be27fbd0bfdffbe7b42c25fea8c249ed1b52d92b50c1e599ffd41aec
 pkgconf_sha256=cd05c9589b9f86ecf044c10a2269822bc9eb001eced2582cfffd658b0a50c243
 deps="$root/.deps"
 

@@ -54,6 +54,7 @@ type Renderer struct {
 	placements                           []placement
 	images                               map[uint32]cachedImage
 	replies                              []byte
+	statuses                             []ProgramStatus // oldest update first; at most 256
 	holdUntil                            time.Time
 	writeTime                            time.Time
 	// Dimensions are read-only after New. Width/Height exclude decorations;
@@ -144,6 +145,12 @@ func New(c Config) (_ *Renderer, err error) {
 			}
 		}),
 		vt.WithWritePty(func(_ *vt.Terminal, b []byte) { r.replies = append(r.replies, b...) }),
+		vt.WithProgramStatus(func(_ *vt.Terminal, s vt.ProgramStatus) { r.updateProgramStatus(s) }),
+		vt.WithSemanticPrompt(func(_ *vt.Terminal, e vt.TerminalSemanticPrompt) {
+			if e.Kind == vt.SemanticPromptStart {
+				r.ProgramExited()
+			}
+		}),
 		vt.WithDeviceAttributes(func(_ *vt.Terminal) (vt.DeviceAttributes, bool) {
 			return vt.DeviceAttributes{Primary: vt.DeviceAttributesPrimary{ConformanceLevel: 62, Features: [64]uint16{1, 22}, NumFeatures: 2}}, true
 		}),

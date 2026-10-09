@@ -87,6 +87,20 @@ an explicit time. `CaptureFrameAfter` additionally applies image-replacement
 smoothing; `RenderHeldAfter` reports synchronized-output holds for a recorder to
 honor. Raw `Frame`/`FrameAt` snapshots can show an in-progress update.
 
+`ProgramStatuses()` returns an independent OSC 7501 snapshot sorted by record ID.
+Each `render.ProgramStatus` contains `ID`, `State`, `Kind`, `App`, `Title`,
+`Message`, and `Progress` (-1 when unspecified). App names include ancestor
+inheritance. Records replace earlier reports in full; subtree clears, shell
+prompts, and terminal resets follow the protocol. At most 256 records are stored,
+evicting the least recently updated when full. Status never alters frame pixels.
+
+Forward `TakeReplies()` to the live process to answer OSC 7501 capability queries.
+After feeding its final output, call `ProgramExited()` to discard working and
+blocked records; idle, done, and error remain. Keep all calls on the renderer's
+own goroutine. Snapshots contain Go-owned values that survive further writes and
+closing the renderer. Display titles and messages as plain text; strip invisible
+formatting characters if presenting them outside the terminal grid.
+
 Serialize calls on each renderer, including `Close`. Separate instances may run
 concurrently. `Close` is idempotent; do not call other methods after closing.
 Codec instances also require serialized access. Retained immutable frame images

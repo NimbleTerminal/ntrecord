@@ -330,12 +330,36 @@ func Run(parent context.Context, opts Options) error {
 		}
 	}()
 	var waitRE *regexp.Regexp
+	var statusWaits []tape.Action
+	if opts.Tape != nil {
+		for _, a := range opts.Tape.Actions {
+			if a.Command == "Wait" && a.Scope == "Status" {
+				statusWaits = append(statusWaits, a)
+			}
+		}
+	}
 	checkWait := func() {
 		if pending == nil {
 			return
 		}
-		text, err := r.Text(pending.action.Scope)
-		if err != nil || waitRE.MatchString(text) {
+		var err error
+		matched := false
+		if pending.action.Scope == "Status" {
+			for _, s := range r.ProgramStatuses() {
+				if pending.action.Status.Matches(s.State, s.App, s.ID, s.Kind) {
+					matched = true
+					break
+				}
+			}
+		} else {
+			var text string
+			text, err = r.Text(pending.action.Scope)
+			matched = waitRE.MatchString(text)
+		}
+		if err != nil || matched {
+			if matched && pending.action.Scope == "Status" {
+				statusWaits = statusWaits[1:]
+			}
 			pending.ack <- err
 			pending = nil
 			waitDeadline = nil
@@ -460,6 +484,10 @@ func Run(parent context.Context, opts Options) error {
 					case <-ctx.Done():
 						runErr = errors.Join(runErr, ctx.Err())
 					}
+					r.ProgramExited()
+					if len(statusWaits) > 0 {
+						runErr = errors.Join(runErr, statusWaits[0].Error(fmt.Errorf("program exited before Wait+Status %s completed", statusWaits[0].Status)))
+					}
 					finished = true
 				}
 				continue
@@ -512,7 +540,9 @@ func Run(parent context.Context, opts Options) error {
 				}
 			case "Wait":
 				pending = &c
-				waitRE = regexp.MustCompile(a.Text)
+				if a.Scope != "Status" {
+					waitRE = regexp.MustCompile(a.Text)
+				}
 				waitTimer = time.NewTimer(a.Duration)
 				waitDeadline = waitTimer.C
 				checkWait()
@@ -546,6 +576,12 @@ func Run(parent context.Context, opts Options) error {
 			}
 			c.ack <- actionErr
 		case <-waitDeadline:
+			if pending.action.Scope == "Status" {
+				pending.ack <- fmt.Errorf("Wait+Status timed out after %s waiting for %s; current records: %s", pending.action.Duration, pending.action.Status, statusSummary(r.ProgramStatuses()))
+				pending = nil
+				waitDeadline = nil
+				continue
+			}
 			text, _ := r.Text(pending.action.Scope)
 			if len(text) > 500 {
 				text = text[len(text)-500:]

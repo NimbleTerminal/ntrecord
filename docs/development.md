@@ -34,7 +34,7 @@ go run . examples/text.tape
 
 ### Pins
 
-Native setup downloads and builds Ghostty commit `0e0ff282f72c92d930d41f4703547d3bc9618ba2` under `.deps/`. The Go binding is pinned in `go.mod` to commit `183d2bc56a8a` (pseudo-version `v0.0.0-20261004135024-183d2bc56a8a`). Its API is unstable, so update the two together. After a bump, run `task terminfo` to regenerate the embedded `xterm-ghostty` terminfo entry from the same Ghostty revision. It needs `tic` from ncurses, and a test fails if the entry and its source disagree.
+Native setup downloads and builds Ghostty commit `34f39002c6e3974b54e6a6d400bd83777c5ea558` under `.deps/`. The Go binding is pinned in `go.mod` to commit `8812ad0e0f79` (pseudo-version `v0.0.0-20261007030428-8812ad0e0f79`). Its API is unstable, so update the two together. After a bump, run `task terminfo` to regenerate the embedded `xterm-ghostty` terminfo entry from the same Ghostty revision. It needs `tic` from ncurses, and a test fails if the entry and its source disagree.
 
 Tool versions, the source revision, and archive checksums are pinned in `scripts/native-common.sh` and `scripts/bootstrap-tools.sh`.
 

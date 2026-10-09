@@ -90,6 +90,7 @@ type Action struct {
 	Interval      time.Duration
 	Count         int
 	Scope         string
+	Status        StatusCondition
 	Line, Column  int
 	Source        string
 }
@@ -296,6 +297,27 @@ func (p *parser) read(r io.Reader, name string, sourced bool) error {
 			if e != nil {
 				return fail(e)
 			}
+		case "Wait+Status":
+			a.Command, a.Scope = "Wait", "Status"
+			a.Duration = p.tape.Config.WaitTimeout
+			if hasTiming {
+				a.Duration = a.Interval
+			}
+			if a.Duration <= 0 {
+				return fail(fmt.Errorf("Wait timeout must be positive"))
+			}
+			state, e := value()
+			if e != nil {
+				return fail(e)
+			}
+			var filters []string
+			for !s.end() && s.peek().line == t.line && !isCommand(s.peek().text) {
+				filters = append(filters, s.pop().text)
+			}
+			a.Status, e = parseStatusCondition(state, filters)
+			if e != nil {
+				return fail(e)
+			}
 		case "Wait", "Wait+Line", "Wait+Screen":
 			a.Command = "Wait"
 			a.Scope = "Line"
@@ -367,7 +389,7 @@ func isUnit(s string) bool {
 func isCommand(s string) bool {
 	head, _, _ := strings.Cut(s, "@")
 	switch head {
-	case "Output", "Require", "Env", "Source", "Set", "Type", "Sleep", "Hide", "Show", "Wait", "Wait+Line", "Wait+Screen", "Screenshot", "Copy", "Paste":
+	case "Output", "Require", "Env", "Source", "Set", "Type", "Sleep", "Hide", "Show", "Wait", "Wait+Line", "Wait+Screen", "Wait+Status", "Screenshot", "Copy", "Paste":
 		return true
 	}
 	return isKey(head)
