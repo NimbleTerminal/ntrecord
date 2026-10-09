@@ -34,6 +34,10 @@ jobs:
         with:
           version: v2.16.0
           args: release --snapshot --clean --skip=notarize
+        env:
+          # JavaScript actions need not inherit the checkout directory as PWD.
+          # GoReleaser uses it for absolute cgo compiler/pkg-config paths.
+          PWD: ${{ github.workspace }}
       - uses: actions/upload-artifact@v7
         with:
           name: release-snapshot
@@ -109,6 +113,7 @@ jobs:
           version: v2.16.0
           args: release --clean
         env:
+          PWD: ${{ github.workspace }}
           GITHUB_TOKEN: ${{ github.token }}
           HOMEBREW_TAP_GITHUB_TOKEN: ${{ secrets.HOMEBREW_TAP_GITHUB_TOKEN }}
           MACOS_SIGN_P12: ${{ secrets.MACOS_SIGN_P12 }}
