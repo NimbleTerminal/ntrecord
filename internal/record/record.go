@@ -739,13 +739,19 @@ func play(ctx context.Context, actions []tape.Action, events chan<- event, virtu
 // graphics. terminfoDir holds that terminal's entry (see package terminfo); a
 // user's own TERMINFO stays searchable through TERMINFO_DIRS. Without a
 // directory the entry cannot be found, so it falls back to xterm-256color.
+//
+// NO_COLOR is dropped for the same reason TERM is replaced: ntrecord is the
+// terminal now, and it always paints full color. Honoring a NO_COLOR meant
+// for the user's own terminal makes programs strip SGR colors, which also
+// erases the placeholder foreground color that encodes a Kitty image ID —
+// the recorded image then renders blank.
 func environment(base []string, version, terminfoDir string) []string {
 	var env []string
 	var userInfo, userDirs string
 	for _, s := range base {
 		key, value, _ := strings.Cut(s, "=")
 		switch key {
-		case "TERM", "COLORTERM", "TERM_PROGRAM", "TERM_PROGRAM_VERSION", "PS1", "PS2":
+		case "TERM", "COLORTERM", "TERM_PROGRAM", "TERM_PROGRAM_VERSION", "PS1", "PS2", "NO_COLOR":
 			continue
 		case "TERMINFO", "TERMINFO_DIRS":
 			if terminfoDir != "" {

@@ -134,6 +134,18 @@ func TestEnvironmentAdvertisesVersion(t *testing.T) {
 	}
 }
 
+func TestEnvironmentDropsNoColor(t *testing.T) {
+	// NO_COLOR makes programs strip SGR colors; that also erases the
+	// placeholder foreground carrying a Kitty image ID, blanking the image.
+	env := environment([]string{"NO_COLOR=1", "CLICOLOR_FORCE=0"}, "dev", "/our/db")
+	if slices.Contains(env, "NO_COLOR=1") {
+		t.Errorf("NO_COLOR survived in %v", env)
+	}
+	if !slices.Contains(env, "COLORTERM=truecolor") {
+		t.Errorf("missing COLORTERM=truecolor in %v", env)
+	}
+}
+
 func TestEnvironmentDeclaresGhosttyTerminal(t *testing.T) {
 	env := environment([]string{"TERM=dumb", "TERMINFO=/users/own", "TERMINFO_DIRS=/other"}, "dev", "/our/db")
 	for _, want := range []string{"TERM=xterm-ghostty", "TERMINFO=/our/db", "TERMINFO_DIRS=/users/own:/other"} {
