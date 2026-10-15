@@ -9,7 +9,9 @@ import (
 	"io"
 	"os"
 	"path/filepath"
+	"strconv"
 	"strings"
+	"syscall"
 	"testing"
 	"time"
 
@@ -219,5 +221,37 @@ func TestHideFlushesVisibleHoldAndOmitsHiddenFrames(t *testing.T) {
 	}
 	if !blue || !green {
 		t.Fatalf("lost visibility boundary: blue=%v green=%v", blue, green)
+	}
+}
+
+// A job the shell put in the background ends with the recording, rather than
+// outliving it in a process group of its own.
+func TestShutdownEndsBackgroundJobs(t *testing.T) {
+	dir := t.TempDir()
+	pidFile := filepath.Join(dir, "pid")
+	source := fmt.Sprintf("Output %q\nSet Shell /bin/sh\nType@1ms \"sleep 300 & echo $! > %s\"\nEnter\nSleep 500ms\n", filepath.Join(dir, "out.gif"), pidFile)
+	p, err := tape.Parse(strings.NewReader(source))
+	if err != nil {
+		t.Fatal(err)
+	}
+	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
+	defer cancel()
+	if err = Run(ctx, Options{Config: p.Config, Tape: p}); err != nil {
+		t.Fatal(err)
+	}
+	b, err := os.ReadFile(pidFile)
+	if err != nil {
+		t.Fatal(err)
+	}
+	pid, err := strconv.Atoi(strings.TrimSpace(string(b)))
+	if err != nil {
+		t.Fatal(err)
+	}
+	for deadline := time.Now().Add(3 * time.Second); syscall.Kill(pid, 0) == nil; {
+		if time.Now().After(deadline) {
+			syscall.Kill(pid, syscall.SIGKILL)
+			t.Fatalf("background job %d outlived the recording", pid)
+		}
+		time.Sleep(20 * time.Millisecond)
 	}
 }

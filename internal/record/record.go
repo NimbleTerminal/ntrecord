@@ -76,6 +76,9 @@ const (
 	settleLimit = time.Second
 )
 
+// hangupGrace is how long the program has, at the end, to exit on SIGHUP.
+const hangupGrace = 250 * time.Millisecond
+
 func Run(parent context.Context, opts Options) error {
 	if err := validateCast(opts.Config, opts.Tape); err != nil {
 		return err
@@ -190,7 +193,18 @@ func Run(parent context.Context, opts Options) error {
 	}()
 	defer func() {
 		cancel()
+		// pty starts the program as the leader of its own session. Hang up the
+		// whole session as a closing terminal would, background jobs included,
+		// and give it a moment; then kill what is left. The leader gets only
+		// the terminal's SIGHUP: a second one cuts bash's cleanup short.
+		sid := cmd.Process.Pid
 		_ = ptmx.Close() // sends SIGHUP to the controlling foreground group
+		endSession(sid, syscall.SIGHUP)
+		select {
+		case <-exit:
+		case <-time.After(hangupGrace):
+		}
+		endSession(sid, syscall.SIGKILL)
 		_ = cmd.Process.Kill()
 		<-readDone
 		<-writeDone

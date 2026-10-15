@@ -37,7 +37,7 @@ var rules = map[string]rule{
 	"internal/playback":     {internal: []string{"internal/renderconfig", "asciicast", "render", "internal/tape"}},
 	"internal/player":       {internal: []string{"internal/playback", "internal/tape"}, external: []string{"golang.org/x/term", "golang.org/x/sys/unix"}},
 	"asciicast":             {}, // standard-library event codec, independent of rendering
-	"internal/record":       {internal: []string{"internal/renderconfig", "asciicast", "internal/encode", "render", "internal/tape", "internal/terminfo"}, external: []string{"github.com/creack/pty"}, exec: true},
+	"internal/record":       {internal: []string{"internal/renderconfig", "asciicast", "internal/encode", "render", "internal/tape", "internal/terminfo"}, external: []string{"github.com/creack/pty", "golang.org/x/sys/unix"}, exec: true},
 	// The only package that may import libghostty, so cgo stays behind one door.
 	"render":             {internal: []string{"internal/theme"}, external: []string{"go.mitchellh.com/libghostty", "golang.org/x/image", "github.com/go-text/typesetting", "golang.org/x/text/unicode/norm"}},
 	"internal/tape":      {internal: []string{"internal/encode", "internal/theme"}},
