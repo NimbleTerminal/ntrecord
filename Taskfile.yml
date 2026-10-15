@@ -64,11 +64,11 @@ tasks:
       - rm -rf .deps
   fmt:
     desc: Format Go sources
-    cmds: [gofmt -w ./*.go internal examples render gifencode asciicast testdata/library]
+    cmds: [gofmt -w ./*.go internal examples render gifencode asciicast skills testdata/library]
   fmt-check:
     desc: Check Go formatting
     cmds:
-      - 'files=$(gofmt -l ./*.go internal examples render gifencode asciicast testdata/library); if [ -n "$files" ]; then printf "%s\n" "$files"; exit 1; fi'
+      - 'files=$(gofmt -l ./*.go internal examples render gifencode asciicast skills testdata/library); if [ -n "$files" ]; then printf "%s\n" "$files"; exit 1; fi'
   go-tidy:
     desc: Tidy module dependencies
     cmds: [go mod tidy]

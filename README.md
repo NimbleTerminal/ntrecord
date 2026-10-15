@@ -21,6 +21,15 @@ brew install ffmpeg
 
 Archives and SHA-256 checksums are on [GitHub Releases](https://github.com/NimbleTerminal/ntrecord/releases). Linux binaries are static (musl) and macOS binaries use the system libraries, so none of them needs Zig, pkg-config, or Ghostty at runtime. To build from source, see [docs/development.md](docs/development.md).
 
+ntrecord also carries a skill that teaches an AI agent to script, record, and render with it. Install it for the agents on your machine, from the binary or from the repository:
+
+```sh
+ntrecord skill install                        # from the binary, so it matches its flags
+npx skills add NimbleTerminal/ntrecord         # or from the repository, for every agent it finds
+```
+
+Or read [`SKILL.md`](skills/ntrecord/SKILL.md).
+
 ## Quick start
 
 ```sh

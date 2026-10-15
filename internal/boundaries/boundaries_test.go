@@ -30,7 +30,7 @@ type rule struct {
 // moment to decide what it may depend on.
 var rules = map[string]rule{
 	"internal/renderconfig": {internal: []string{"internal/tape", "render"}},
-	".":                     {internal: []string{"internal/doctor", "internal/encode", "internal/player", "internal/record", "internal/tape"}, external: []string{"golang.org/x/term"}},
+	".":                     {internal: []string{"internal/doctor", "internal/encode", "internal/player", "internal/record", "internal/tape", "skills"}, external: []string{"golang.org/x/term"}},
 	"internal/doctor":       {internal: []string{"internal/encode", "render", "internal/tape", "internal/terminfo"}, external: []string{"github.com/creack/pty"}, exec: true},
 	"internal/encode":       {internal: []string{"gifencode"}, exec: true},
 	"gifencode":             {},
@@ -44,6 +44,7 @@ var rules = map[string]rule{
 	"internal/terminfo":  {},
 	"internal/testvideo": {exec: true}, // test helper that drives ffmpeg/ffprobe
 	"internal/theme":     {},
+	"skills":             {}, // the embedded agent skill, nothing more
 }
 
 // exempt packages are tools and demos, not part of the recorder.

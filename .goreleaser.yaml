@@ -97,6 +97,9 @@ homebrew_casks:
     caveats: |
       GIF recording is self-contained. MP4 and WebM output require ffmpeg:
         brew install ffmpeg
+
+      To teach your AI agents how to use ntrecord:
+        ntrecord skill install
     custom_block: |
       on_macos do
         depends_on macos: ">= :ventura"

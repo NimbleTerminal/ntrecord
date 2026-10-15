@@ -31,7 +31,7 @@ func TestUsageNamesEveryCommand(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	for _, want := range []string{"validate", "doctor", "record", "--version", "<file.tape>"} {
+	for _, want := range []string{"validate", "doctor", "skill", "record", "--version", "<file.tape>"} {
 		if !strings.Contains(out, want) {
 			t.Errorf("usage lacks %q:\n%s", want, out)
 		}
