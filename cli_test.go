@@ -125,3 +125,20 @@ func TestUsageMentionsMode(t *testing.T) {
 		t.Errorf("usage does not explain -mode:\n%s", out)
 	}
 }
+
+func TestValidateAndDoctorHelp(t *testing.T) {
+	// Help is help, never a tape path and never a run of the checks.
+	for _, verb := range []string{"validate", "doctor"} {
+		for _, flag := range []string{"-h", "--help"} {
+			out, errOut, err := runCLI(t, verb, flag)
+			if err != nil || !strings.Contains(out, "Usage: ntrecord "+verb) || errOut != "" {
+				t.Errorf("%s %s: err=%v\nstdout:\n%s\nstderr:\n%s", verb, flag, err, out, errOut)
+			}
+		}
+	}
+	for _, args := range [][]string{{"doctor", "extra"}, {"doctor", "-x"}, {"validate", "-x"}} {
+		if _, _, err := runCLI(t, args...); err == nil {
+			t.Errorf("accepted %v", args)
+		}
+	}
+}

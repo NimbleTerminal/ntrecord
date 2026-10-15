@@ -53,6 +53,31 @@ doctor checks that this machine can record.
 skill show prints the skill that teaches an agent to use ntrecord; skill install
 installs it for the agents on this machine.`
 
+const validateUsage = `Usage: ntrecord validate <file.tape>...
+
+validate checks tapes (syntax, fonts, themes, Require, outputs) without recording.`
+
+const doctorUsage = `Usage: ntrecord doctor
+
+doctor checks that this machine can record.`
+
+// verbArgs splits a verb's arguments for verbs with no options but help: -h or
+// --help anywhere asks for help, another option is an error, and -- ends them.
+func verbArgs(verb string, args []string) (rest []string, help bool, err error) {
+	for i, a := range args {
+		switch {
+		case a == "--":
+			return append(rest, args[i+1:]...), false, nil
+		case a == "-h" || a == "--help":
+			return nil, true, nil
+		case strings.HasPrefix(a, "-") && a != "-":
+			return nil, false, fmt.Errorf("%s: unknown option %s (see ntrecord %s --help)", verb, a, verb)
+		}
+		rest = append(rest, a)
+	}
+	return rest, false, nil
+}
+
 func run(args []string, stdout, stderr io.Writer) error {
 	if len(args) == 1 && (args[0] == "--version" || args[0] == "-version" || args[0] == "version") {
 		fmt.Fprintln(stdout, "ntrecord", version)
@@ -64,10 +89,26 @@ func run(args []string, stdout, stderr io.Writer) error {
 	}
 	switch args[0] {
 	case "validate":
-		return validate(args[1:], stdout, stderr)
+		paths, help, err := verbArgs("validate", args[1:])
+		if help {
+			fmt.Fprintln(stdout, validateUsage)
+			return nil
+		} else if err != nil {
+			return err
+		}
+		return validate(paths, stdout, stderr)
 	case "skill":
 		return skillCommand(args[1:], stdout, stderr)
 	case "doctor":
+		rest, help, err := verbArgs("doctor", args[1:])
+		if help {
+			fmt.Fprintln(stdout, doctorUsage)
+			return nil
+		} else if err != nil {
+			return err
+		} else if len(rest) > 0 {
+			return errors.New("doctor: takes no arguments (see ntrecord doctor --help)")
+		}
 		if !doctor.Run(stdout, doctor.Options{Version: version}) {
 			return errors.New("doctor found problems")
 		}
