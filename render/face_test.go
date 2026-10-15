@@ -75,3 +75,23 @@ func TestFaceAdvanceMatches(t *testing.T) {
 		t.Fatalf("advance %v %v, want %v %v", ga, gok, wa, wok)
 	}
 }
+
+func TestFaceSlot(t *testing.T) {
+	// Each slot prefers the face whose style names it exactly: Bold over
+	// Semibold or ExtraBold, Regular over Light, whatever order they are found.
+	for _, tc := range []struct {
+		better, worse string
+		slot          int
+	}{
+		{"Bold", "Semibold", 1}, {"Bold", "Demi Bold", 1}, {"Bold", "ExtraBold", 1},
+		{"Regular", "Light", 0}, {"Regular", "Medium", 0}, {"Book", "Thin", 0},
+		{"Italic", "Light Italic", 2}, {"Oblique", "Medium Oblique", 2},
+		{"Bold Italic", "Semibold Italic", 3}, {"BoldOblique", "ExtraBold Italic", 3},
+	} {
+		bs, br := faceSlot(tc.better)
+		ws, wr := faceSlot(tc.worse)
+		if bs != tc.slot || ws != tc.slot || br <= wr {
+			t.Errorf("%s: slot %d rank %d; %s: slot %d rank %d; want slot %d, %s ranked higher", tc.better, bs, br, tc.worse, ws, wr, tc.slot, tc.better)
+		}
+	}
+}

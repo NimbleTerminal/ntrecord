@@ -56,6 +56,7 @@ func fontFaces(family string) ([4]*fontSource, error) {
 		roots = append(roots, filepath.Join(xdg, "fonts"))
 	}
 	normalize := func(s string) string { return strings.ToLower(strings.ReplaceAll(s, " ", "")) }
+	var ranks [4]int
 	for _, root := range roots {
 		_ = filepath.WalkDir(root, func(path string, d fs.DirEntry, err error) error {
 			if err != nil || d.IsDir() {
@@ -88,16 +89,9 @@ func fontFaces(family string) ([4]*fontSource, error) {
 					continue
 				}
 				style, _ := f.Name(nil, sfnt.NameIDSubfamily)
-				style = strings.ToLower(style)
-				i := 0
-				if strings.Contains(style, "bold") {
-					i++
-				}
-				if strings.Contains(style, "italic") || strings.Contains(style, "oblique") {
-					i += 2
-				}
-				if faces[i] == nil {
-					faces[i] = &fontSource{f, b, n}
+				i, rank := faceSlot(style)
+				if faces[i] == nil || rank > ranks[i] {
+					faces[i], ranks[i] = &fontSource{f, b, n}, rank
 				}
 			}
 			return nil
@@ -120,4 +114,28 @@ func fontFaces(family string) ([4]*fontSource, error) {
 		}
 	}
 	return faces, nil
+}
+
+// faceSlot places a face by its style name: 0 regular, 1 bold, 2 italic, 3 bold
+// italic. A style that names its slot exactly ranks 1, so Bold wins the bold
+// slot over Semibold or ExtraBold, and Regular wins over Light, whichever is
+// found first; any other weight still fills an empty slot.
+func faceSlot(style string) (slot, rank int) {
+	s := strings.ToLower(strings.NewReplacer(" ", "", "-", "", "_", "").Replace(style))
+	weight := s
+	for _, slant := range []string{"italic", "oblique"} {
+		if strings.Contains(s, slant) {
+			slot += 2
+			weight = strings.Replace(s, slant, "", 1)
+			break
+		}
+	}
+	if strings.Contains(weight, "bold") {
+		slot++
+	}
+	switch weight {
+	case "bold", "", "regular", "normal", "book", "roman":
+		rank = 1
+	}
+	return slot, rank
 }
