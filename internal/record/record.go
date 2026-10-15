@@ -408,6 +408,32 @@ func Run(parent context.Context, opts Options) error {
 			tailLimit.Stop()
 		}
 	}()
+	// Forwarding to opts.Output runs apart from this loop, so a write blocked
+	// on a paused terminal cannot keep cancellation from ending the recording.
+	// The queue is bounded: a slow reader still slows the program down.
+	var forward chan []byte
+	forwardErr := make(chan error, 1)
+	forwardDone := make(chan struct{})
+	if opts.Output != nil {
+		forward = make(chan []byte, 64)
+		go func() {
+			defer close(forwardDone)
+			for b := range forward {
+				n, err := opts.Output.Write(b)
+				if err == nil && n != len(b) {
+					err = io.ErrShortWrite
+				}
+				if err != nil {
+					forwardErr <- err
+					for range forward {
+					}
+					return
+				}
+			}
+		}()
+	} else {
+		close(forwardDone)
+	}
 	// When a cap ends a settle or the tail, output already read from the PTY
 	// is still applied: capped runs that many more output events first.
 	var capped func()
@@ -497,12 +523,13 @@ func Run(parent context.Context, opts Options) error {
 					if reply := r.TakeReplies(); len(reply) > 0 {
 						err = errors.Join(err, enqueue(writeRequest{data: reply}))
 					}
-					if opts.Output != nil {
-						n, writeErr := opts.Output.Write(o.data)
-						if writeErr == nil && n != len(o.data) {
-							writeErr = io.ErrShortWrite
+					if forward != nil {
+						select {
+						case forward <- o.data:
+						case writeErr := <-forwardErr:
+							err = errors.Join(err, writeErr)
+						case <-ctx.Done(): // the loop ends on it next
 						}
-						err = errors.Join(err, writeErr)
 					}
 					if err != nil {
 						runErr, finished = err, true
@@ -673,10 +700,25 @@ func Run(parent context.Context, opts Options) error {
 			if err := capture(ctx, time.Now(), false); err != nil {
 				runErr, finished = err, true
 			}
+		case err := <-forwardErr:
+			runErr, finished = err, true
 		case <-ctx.Done():
 			runErr = ctx.Err()
 			finished = true
 		}
+	}
+	// Let forwarded output reach the terminal, unless cancelled.
+	if forward != nil {
+		close(forward)
+	}
+	select {
+	case <-forwardDone:
+	case <-ctx.Done():
+	}
+	select {
+	case err := <-forwardErr:
+		runErr = errors.Join(runErr, err)
+	default:
 	}
 	// Every runtime exit attempts every output's finalization. A failed video
 	// stream must not discard healthy GIF/text outputs or their diagnostics.

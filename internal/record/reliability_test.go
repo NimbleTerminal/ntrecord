@@ -48,6 +48,35 @@ func TestForwardingErrorStillSavesRecording(t *testing.T) {
 	assertGIFSaved(t, c.Output)
 }
 
+type blockedOutput struct{ release chan struct{} }
+
+func (w blockedOutput) Write(b []byte) (int, error) { <-w.release; return len(b), nil }
+
+// A forwarded write that never returns, as to a paused terminal, must not keep
+// cancellation from ending the recording and saving it.
+func TestBlockedForwardingObservesCancellation(t *testing.T) {
+	c := tape.DefaultConfig()
+	c.Cols, c.Rows = 20, 3
+	c.Output = filepath.Join(t.TempDir(), "saved.gif")
+	out := blockedOutput{make(chan struct{})}
+	defer close(out.release)
+	ctx, cancel := context.WithTimeout(context.Background(), 500*time.Millisecond)
+	defer cancel()
+	done := make(chan error, 1)
+	go func() {
+		done <- Run(ctx, Options{Config: c, Command: []string{"/bin/sh", "-c", "printf SAVED; sleep 5"}, Output: out})
+	}()
+	select {
+	case err := <-done:
+		if !errors.Is(err, context.DeadlineExceeded) {
+			t.Fatal(err)
+		}
+	case <-time.After(3 * time.Second):
+		t.Fatal("recording did not end on cancellation while a forwarded write was blocked")
+	}
+	assertGIFSaved(t, c.Output)
+}
+
 func TestTapeFinalEnterDrainsOutput(t *testing.T) {
 	for i := 0; i < 5; i++ {
 		p, err := tape.Parse(strings.NewReader("Set TypingSpeed 0ms\nType `printf '\\106\\111\\116\\101\\114\\012'`\nEnter"))
