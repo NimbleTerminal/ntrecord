@@ -104,3 +104,25 @@ func TestLargeGraphicsEvent(t *testing.T) {
 		t.Fatalf("large event lost: %v", err)
 	}
 }
+
+func TestOutputRejectsBackwardsTimeWhileBuffering(t *testing.T) {
+	// An incomplete UTF-8 sequence writes nothing yet, but its time still
+	// counts: a later call may not go back before it.
+	w, err := NewWriter(io.Discard, Terminal{Cols: 80, Rows: 24})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := w.Output(2*time.Second, []byte("\xe2")); err != nil {
+		t.Fatal(err)
+	}
+	if err := w.Output(time.Second, []byte("\x82\xac")); err == nil {
+		t.Fatal("accepted output before the time of the buffered bytes")
+	}
+	w, _ = NewWriter(io.Discard, Terminal{Cols: 80, Rows: 24})
+	if err := w.Output(2*time.Second, []byte("\xe2")); err != nil {
+		t.Fatal(err)
+	}
+	if err := w.End(time.Second); err == nil {
+		t.Fatal("ended before the time of the buffered bytes")
+	}
+}

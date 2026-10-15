@@ -192,8 +192,9 @@ func (r *Reader) parse(b []byte) (Event, error) {
 // Input, environment, and command metadata are deliberately not collected.
 type Writer struct {
 	enc     *json.Encoder
-	last    time.Duration
+	last    time.Duration // time of the last event written
 	pending []byte
+	held    time.Duration // time of the last Output, written or not
 	err     error
 }
 
@@ -229,6 +230,11 @@ func (w *Writer) Output(at time.Duration, b []byte) error {
 	if w.err != nil {
 		return w.err
 	}
+	if at < w.held {
+		w.err = fmt.Errorf("asciicast output time moved backwards")
+		return w.err
+	}
+	w.held = at
 	b = append(w.pending, b...)
 	n := 0
 	for n < len(b) && utf8.FullRune(b[n:]) {
@@ -246,6 +252,9 @@ func (w *Writer) Output(at time.Duration, b []byte) error {
 // End flushes incomplete UTF-8 and preserves trailing silence without inventing
 // a process exit status. Call it once after the final Output; it does not close dst.
 func (w *Writer) End(at time.Duration) error {
+	if w.err == nil && at < w.held {
+		w.err = fmt.Errorf("asciicast output time moved backwards")
+	}
 	if len(w.pending) > 0 {
 		if err := w.event(at, "o", string(w.pending)); err != nil {
 			return err
