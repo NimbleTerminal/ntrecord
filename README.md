@@ -170,7 +170,7 @@ The recorded window keeps the size you asked for. Limits and failure behavior:
 - GIF retains compressed source frames to build one stable palette for the whole recording. Its 512 MiB working-set budget includes sources, indexed frames, palettes and temporary buffers; long or noisy recordings can reach it sooner than simple terminal sessions. Video is streamed to FFmpeg and does not accumulate. See [GIF encoding and benchmarks](docs/gif-encoding.md) for details.
 - The window is limited to 8192 pixels per side and 16 megapixels.
 - If the program fails, or output cannot be forwarded (a closed stdout pipe, for example), ntrecord tries to save every output first and then returns the error.
-- FFmpeg writes have a 30-second deadline and are interrupted on cancellation. A video stream that fails or is cut off cannot always be saved. Other formats finish independently, and an existing file is replaced only after a successful encode.
+- FFmpeg writes have a 30-second deadline. On cancellation, a frame already being written gets 2 more seconds to reach FFmpeg, so a slow FFmpeg still saves the video; one that has stopped reading is cut off. A video stream that fails or is cut off cannot always be saved. Other formats finish independently, and an existing file is replaced only after a successful encode.
 
 ## Go libraries
 

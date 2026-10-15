@@ -157,6 +157,43 @@ func TestVideoEmptyAndAbort(t *testing.T) {
 	}
 }
 
+// A codec that is slow to start, as on a loaded machine, is not stalled:
+// cancellation lets the frame being written reach it, and the video is saved.
+func TestSlowVideoWriteSurvivesCancellation(t *testing.T) {
+	testvideo.Require(t)
+	ffmpeg, err := exec.LookPath("ffmpeg")
+	if err != nil {
+		t.Fatal(err)
+	}
+	dir := t.TempDir()
+	script := "#!/bin/sh\ncase \"$2\" in -encoders|-version) exec " + ffmpeg + " \"$@\";; esac\nsleep 0.5\nexec " + ffmpeg + " \"$@\"\n"
+	if err := os.WriteFile(filepath.Join(dir, "ffmpeg"), []byte(script), 0755); err != nil {
+		t.Fatal(err)
+	}
+	t.Setenv("PATH", dir+string(os.PathListSeparator)+os.Getenv("PATH"))
+	path := filepath.Join(dir, "out.webm")
+	e, err := New(path, 1024, 1024)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer e.Abort()
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+	done := make(chan error, 1)
+	go func() { done <- e.AddContext(ctx, image.NewRGBA(image.Rect(0, 0, 1024, 1024)), time.Second) }()
+	time.Sleep(100 * time.Millisecond) // the write is blocked: FFmpeg has not started
+	cancel()
+	if err := <-done; err != nil {
+		t.Fatalf("write to a slow FFmpeg failed on cancellation: %v", err)
+	}
+	if err := e.Finish(); err != nil {
+		t.Fatal(err)
+	}
+	if len(testvideo.Decode(t, path)) == 0 {
+		t.Fatal("video has no frames")
+	}
+}
+
 // The fake codec advertises support but never consumes stdin. Cancellation
 // must unblock an in-flight pipe write, reap it, and leave the old file intact.
 func TestStalledVideoWriteCancellation(t *testing.T) {
@@ -190,7 +227,7 @@ func TestStalledVideoWriteCancellation(t *testing.T) {
 		if !errors.Is(err, context.Canceled) {
 			t.Fatal(err)
 		}
-	case <-time.After(3 * time.Second):
+	case <-time.After(cancelGrace + 5*time.Second):
 		t.Fatal("cancelled video write hung")
 	}
 	if err := e.Finish(); !errors.Is(err, context.Canceled) {

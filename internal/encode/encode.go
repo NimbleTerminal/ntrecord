@@ -247,9 +247,15 @@ func (e *Encoder) Add(frame *image.RGBA, duration time.Duration) error {
 	return e.AddContext(context.Background(), frame, duration)
 }
 
-// AddContext interrupts a blocked video write when recording is cancelled.
-// A partial raw frame cannot be finalized safely; that video fails while
-// independent output formats can still be saved.
+// cancelGrace is how long a video write in progress may still take once
+// recording is cancelled. FFmpeg that is merely slow, such as one still
+// starting on a loaded machine, gets the frame and the video is saved; one that
+// has stopped reading is cut off.
+const cancelGrace = 2 * time.Second
+
+// AddContext interrupts a blocked video write when recording is cancelled,
+// after cancelGrace. A partial raw frame cannot be finalized safely; that video
+// fails while independent output formats can still be saved.
 func (e *Encoder) AddContext(ctx context.Context, frame *image.RGBA, duration time.Duration) error {
 	if e.failure != nil {
 		return e.failure
@@ -275,7 +281,7 @@ func (e *Encoder) AddContext(ctx context.Context, frame *image.RGBA, duration ti
 		}
 		interrupted := make(chan struct{})
 		stop := context.AfterFunc(ctx, func() {
-			_ = e.stdin.SetWriteDeadline(time.Now())
+			_ = e.stdin.SetWriteDeadline(time.Now().Add(cancelGrace))
 			close(interrupted)
 		})
 		defer func() {
