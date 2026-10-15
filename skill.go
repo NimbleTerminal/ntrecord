@@ -127,8 +127,8 @@ func installSkill(where string, stdout, stderr io.Writer) error {
 
 // clearDanglingLink removes dir when it is a symbolic link to nothing, such as
 // one left by a moved checkout, so a real folder can take its place. A link to
-// a folder that exists was made on purpose: it is neither replaced nor written
-// through, and the error says where it points.
+// a folder that exists was made on purpose, and one whose target cannot be
+// checked may have been: neither is replaced nor written through.
 func clearDanglingLink(dir string, stderr io.Writer) error {
 	info, err := os.Lstat(dir)
 	if err != nil || info.Mode()&os.ModeSymlink == 0 {
@@ -140,6 +140,8 @@ func clearDanglingLink(dir string, stderr io.Writer) error {
 	}
 	if _, err := os.Stat(dir); err == nil {
 		return fmt.Errorf("%s is a link to %s; remove it to install the skill from this binary, or keep it to use that copy", dir, target)
+	} else if !os.IsNotExist(err) {
+		return fmt.Errorf("%s is a link to %s, which cannot be checked: %w", dir, target, err)
 	}
 	if err := os.Remove(dir); err != nil {
 		return err

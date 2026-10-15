@@ -171,3 +171,29 @@ func TestSkillInstallRefusesLinkedFolder(t *testing.T) {
 		t.Fatalf("wrote through the link: %v", entries)
 	}
 }
+
+func TestSkillInstallKeepsLinkItCannotCheck(t *testing.T) {
+	// Only a link to nothing is replaced. One whose target cannot be checked,
+	// here for want of permission, may be intentional: it is left alone.
+	if os.Geteuid() == 0 {
+		t.Skip("root reads through any permission")
+	}
+	root, locked := t.TempDir(), t.TempDir()
+	if err := os.Mkdir(filepath.Join(locked, "ntrecord"), 0o755); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.Chmod(locked, 0); err != nil {
+		t.Fatal(err)
+	}
+	t.Cleanup(func() { os.Chmod(locked, 0o755) })
+	link := filepath.Join(root, "ntrecord")
+	if err := os.Symlink(filepath.Join(locked, "ntrecord"), link); err != nil {
+		t.Fatal(err)
+	}
+	if _, _, err := runCLI(t, "skill", "install", root); err == nil {
+		t.Fatal("installed over a link it could not check")
+	}
+	if info, err := os.Lstat(link); err != nil || info.Mode()&os.ModeSymlink == 0 {
+		t.Fatalf("%s is no longer the link: %v", link, err)
+	}
+}

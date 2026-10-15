@@ -39,7 +39,8 @@ const usage = `Usage: ntrecord [-mode realtime|deterministic] <file.tape>
        ntrecord render <file.cast> -o <output> [-font-size pixels] [-fps n] [-speed n]
        ntrecord validate <file.tape>...
        ntrecord doctor
-       ntrecord skill show|install [FOLDER]
+       ntrecord skill show
+       ntrecord skill install [FOLDER]
        ntrecord --version
 
 -mode picks the clock for a tape. realtime (the default) samples the screen as time
