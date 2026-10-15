@@ -323,3 +323,29 @@ func TestRenderCastFlushesUnfinishedSynchronizedUpdate(t *testing.T) {
 		t.Fatal("final held frame is blank")
 	}
 }
+
+// The last picture of a cast gets a frame however little time is left after
+// it, as live recording floors its last sample to one frame period.
+func TestRenderCastKeepsShortLastPicture(t *testing.T) {
+	for name, src := range map[string]string{
+		"short cast":  "{\"version\":2,\"width\":10,\"height\":2,\"duration\":0.02}\n[0,\"o\",\"A\"]",
+		"late change": "{\"version\":2,\"width\":10,\"height\":2,\"duration\":1.01}\n[0,\"o\",\"A\"]\n[1.0,\"o\",\"\\u001b[41mBBBB\"]",
+	} {
+		t.Run(name, func(t *testing.T) {
+			c := tape.DefaultConfig()
+			c.Output = filepath.Join(t.TempDir(), "frames") + "/"
+			if err := RenderCast(context.Background(), strings.NewReader(src), c); err != nil {
+				t.Fatal(err)
+			}
+			frames, _ := filepath.Glob(filepath.Join(c.Output, "*.png"))
+			if len(frames) == 0 {
+				t.Fatal("no frames")
+			}
+			first, _ := os.ReadFile(frames[0])
+			last, _ := os.ReadFile(frames[len(frames)-1])
+			if strings.Contains(src, "41m") && bytes.Equal(first, last) {
+				t.Fatalf("the late change has no frame among %d", len(frames))
+			}
+		})
+	}
+}

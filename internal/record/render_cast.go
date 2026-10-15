@@ -132,8 +132,11 @@ func RenderCast(ctx context.Context, src io.Reader, c tape.Config) error {
 		if err != nil {
 			return err
 		}
+		// The cast's end shortens the sample before it, unless that sample is
+		// the last: like live recording's, the last is held a whole period, so
+		// a picture with less time left still gets a video frame.
 		d := period
-		if eof && end > pos {
+		if eof && end > pos && pendingOutput {
 			d = min(d, end-pos)
 		}
 		previous = frame
