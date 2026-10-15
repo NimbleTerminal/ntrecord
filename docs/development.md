@@ -43,7 +43,7 @@ To use an existing matching installation, set `PKG_CONFIG_PATH` to its `share/pk
 ### Cleaning
 
 ```sh
-task clean       # remove bin/, dist/, .task/; keep dependencies and recordings
+task clean       # remove ./ntrecord, dist/, .task/; keep dependencies and recordings
 task build       # reuse the local native dependencies
 task clean:all   # also remove all of .deps/ (downloads, tools, libraries, caches)
 task build       # reproduce the first build from scratch
