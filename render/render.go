@@ -461,7 +461,10 @@ func (r *Renderer) FrameAt(now time.Time) (*image.RGBA, error) {
 			}
 		}
 		if c.style.Underline {
-			draw.Draw(dst, image.Rect(c.x, c.y+r.atlas.ascent+1, c.x+r.CellWidth, c.y+r.atlas.ascent+2), image.NewUniform(c.fg), image.Point{}, draw.Src)
+			// Below the baseline, but within the cell: a small font or short
+			// line height puts the baseline at the cell's last row or past it.
+			uy := c.y + max(0, min(r.atlas.ascent+1, r.CellHeight-1))
+			draw.Draw(dst, image.Rect(c.x, uy, c.x+r.CellWidth, uy+1), image.NewUniform(c.fg), image.Point{}, draw.Src)
 		}
 		if c.style.Strikethrough {
 			draw.Draw(dst, image.Rect(c.x, c.y+r.CellHeight/2, c.x+r.CellWidth, c.y+r.CellHeight/2+1), image.NewUniform(c.fg), image.Point{}, draw.Src)

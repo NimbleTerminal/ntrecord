@@ -7,6 +7,7 @@ import (
 	"image"
 	"image/color"
 	"image/png"
+	"math"
 	"os"
 	"strings"
 	"testing"
@@ -209,5 +210,40 @@ func TestImageCopiesReleasedOnReset(t *testing.T) {
 	}
 	if frame(t, r) == withImage {
 		t.Fatal("reset retained frame")
+	}
+}
+
+func TestUnderlineStaysInItsCell(t *testing.T) {
+	// The underline sits below the baseline, which at small sizes and short
+	// line heights is the cell's last row or past it; it must not paint the
+	// row beneath.
+	for _, tc := range []struct{ size, lineHeight float64 }{{6, 1}, {6.5, 1}, {7.5, 1}, {8.5, 1}, {12, 0.5}, {18, 0.8}, {18, 1}} {
+		c := DefaultConfig()
+		c.Cols, c.Rows, c.FontSize, c.LineHeight = 4, 3, tc.size, tc.lineHeight
+		paint := func(s string) *image.RGBA {
+			r, err := New(c)
+			if err != nil {
+				t.Fatal(err)
+			}
+			defer r.Close()
+			write(t, r, "\x1b[?25l"+s)
+			return frame(t, r)
+		}
+		plain, underlined := paint("    "), paint("\x1b[4m    \x1b[0m")
+		lo, hi := -1, -1
+		for y := plain.Bounds().Min.Y; y < plain.Bounds().Max.Y; y++ {
+			for x := plain.Bounds().Min.X; x < plain.Bounds().Max.X; x++ {
+				if plain.RGBAAt(x, y) != underlined.RGBAAt(x, y) {
+					if lo < 0 {
+						lo = y
+					}
+					hi = y
+				}
+			}
+		}
+		cellHeight := int(math.Ceil(float64(plain.Bounds().Dy()) / 3))
+		if lo < 0 || hi >= cellHeight {
+			t.Errorf("size %v line height %v: underline on rows %d..%d, cell is %d high", tc.size, tc.lineHeight, lo, hi, cellHeight)
+		}
 	}
 }
