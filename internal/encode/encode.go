@@ -14,6 +14,7 @@ import (
 	"slices"
 	"strconv"
 	"strings"
+	"sync"
 	"syscall"
 	"time"
 
@@ -247,6 +248,11 @@ func (e *Encoder) Add(frame *image.RGBA, duration time.Duration) error {
 	return e.AddContext(context.Background(), frame, duration)
 }
 
+// frameTimeout is how long one video frame may take to write before FFmpeg is
+// taken to have stopped reading. Each frame gets its own, so a long hold of
+// many frames is not cut off while FFmpeg keeps up.
+var frameTimeout = 30 * time.Second
+
 // cancelGrace is how long a video write in progress may still take once
 // recording is cancelled. FFmpeg that is merely slow, such as one still
 // starting on a loaded machine, gets the frame and the video is saved; one that
@@ -275,13 +281,27 @@ func (e *Encoder) AddContext(ctx context.Context, frame *image.RGBA, duration ti
 	if e.file != nil {
 		return nil
 	}
+	// Each frame gets frameTimeout until cancellation, which leaves what is
+	// left of the Add cancelGrace in all. The lock keeps a frame's deadline
+	// from replacing the grace period.
+	var deadline sync.Mutex
+	cancelled := false
+	arm := func() error { return nil }
 	if e.stdin != nil {
-		if err := e.stdin.SetWriteDeadline(time.Now().Add(30 * time.Second)); err != nil {
-			return err
+		arm = func() error {
+			deadline.Lock()
+			defer deadline.Unlock()
+			if cancelled {
+				return nil
+			}
+			return e.stdin.SetWriteDeadline(time.Now().Add(frameTimeout))
 		}
 		interrupted := make(chan struct{})
 		stop := context.AfterFunc(ctx, func() {
+			deadline.Lock()
+			cancelled = true
 			_ = e.stdin.SetWriteDeadline(time.Now().Add(cancelGrace))
+			deadline.Unlock()
 			close(interrupted)
 		})
 		defer func() {
@@ -310,6 +330,9 @@ func (e *Encoder) AddContext(ctx context.Context, frame *image.RGBA, duration ti
 			}
 			e.frames++
 			continue
+		}
+		if err := arm(); err != nil {
+			return err
 		}
 		if err := e.writeFrame(frame); err != nil {
 			// Reap before reading stderr, which exec writes asynchronously.

@@ -194,6 +194,33 @@ func TestSlowVideoWriteSurvivesCancellation(t *testing.T) {
 	}
 }
 
+// A long hold is many frames from one Add. Each frame gets the stall timeout,
+// not the hold as a whole: FFmpeg that keeps reading is never cut off.
+func TestLongHoldToSteadyFFmpeg(t *testing.T) {
+	dir := t.TempDir()
+	script := "#!/bin/sh\nif [ \"$2\" = -encoders ]; then echo ' V..... libx264 fake'; exit 0; fi\nwhile :; do head -c 65536 >/dev/null; sleep 0.02; done\n"
+	if err := os.WriteFile(filepath.Join(dir, "ffmpeg"), []byte(script), 0755); err != nil {
+		t.Fatal(err)
+	}
+	t.Setenv("PATH", dir+string(os.PathListSeparator)+os.Getenv("PATH"))
+	defer func(old time.Duration) { frameTimeout = old }(frameTimeout)
+	frameTimeout = 300 * time.Millisecond
+	e, err := New(filepath.Join(dir, "out.mp4"), 128, 128)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer e.Abort()
+	start := time.Now()
+	// 40 frames of 64 KiB, read at one per 20 ms or more: longer than the
+	// timeout in all, well within it for each.
+	if err := e.Add(image.NewRGBA(image.Rect(0, 0, 128, 128)), 2*time.Second); err != nil {
+		t.Fatalf("after %v: %v", time.Since(start), err)
+	}
+	if time.Since(start) < frameTimeout {
+		t.Skipf("FFmpeg stand-in read too fast (%v) to exercise the timeout", time.Since(start))
+	}
+}
+
 // The fake codec advertises support but never consumes stdin. Cancellation
 // must unblock an in-flight pipe write, reap it, and leave the old file intact.
 func TestStalledVideoWriteCancellation(t *testing.T) {
