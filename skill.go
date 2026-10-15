@@ -11,10 +11,10 @@ import (
 	"nimbleterminal.dev/ntrecord/skills"
 )
 
-const skillUsage = `Usage: ntrecord skill [show]
+const skillUsage = `Usage: ntrecord skill show
        ntrecord skill install [FOLDER]
 
-show (the default) prints the skill that teaches an agent to use ntrecord.
+show prints the skill that teaches an agent to use ntrecord.
 install writes it as ntrecord/SKILL.md under the shared ~/.agents/skills folder
 and the skills folder of each agent found here (Claude Code, Kimi Code), or
 under FOLDER alone. The paths written go to stdout, one to a line.`
@@ -32,10 +32,12 @@ func skillCommand(args []string, stdout, stderr io.Writer) error {
 			return fmt.Errorf("skill: unknown option %s (see ntrecord skill --help)", a)
 		}
 	}
-	sub := "show"
-	if len(args) > 0 {
-		sub, args = args[0], args[1:]
+	// The skill is long, so bare skill is help; printing it takes asking.
+	if len(args) == 0 {
+		fmt.Fprintln(stdout, skillUsage)
+		return nil
 	}
+	sub, args := args[0], args[1:]
 	switch {
 	case sub == "show" && len(args) == 0:
 		_, err := fmt.Fprint(stdout, skills.NTRecord)

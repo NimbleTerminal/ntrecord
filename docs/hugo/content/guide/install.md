@@ -35,7 +35,7 @@ If you are installing ntrecord for an AI agent, also install its skill, which te
 ```sh
 ntrecord skill install                    # for the agents on this machine
 ntrecord skill install ~/.claude/skills   # or into the skills folder named
-ntrecord skill                            # print it, to place it by hand
+ntrecord skill show                       # print it, to place it by hand
 ```
 
 Installation always writes the shared `~/.agents/skills` folder, which Codex and other agents read but do not create, and the folder of each agent found by its home: Claude Code (`~/.claude/skills`) and Kimi Code (`~/.kimi-code/skills`, or `$KIMI_CODE_HOME`). The skill comes from the binary, so it always matches the flags it was built with; run the install again after upgrading. Stdout carries just the paths written, one per line; progress goes to stderr.

@@ -39,7 +39,7 @@ const usage = `Usage: ntrecord [-mode realtime|deterministic] <file.tape>
        ntrecord render <file.cast> -o <output> [-font-size pixels] [-fps n] [-speed n]
        ntrecord validate <file.tape>...
        ntrecord doctor
-       ntrecord skill [install [FOLDER]]
+       ntrecord skill show|install [FOLDER]
        ntrecord --version
 
 -mode picks the clock for a tape. realtime (the default) samples the screen as time
@@ -49,7 +49,7 @@ the same recording and Sleep costs no real time. Use Wait for anything slow.
 
 validate checks tapes (syntax, fonts, themes, Require, outputs) without recording.
 doctor checks that this machine can record.
-skill prints the skill that teaches an agent to use ntrecord; skill install
+skill show prints the skill that teaches an agent to use ntrecord; skill install
 installs it for the agents on this machine.`
 
 func run(args []string, stdout, stderr io.Writer) error {

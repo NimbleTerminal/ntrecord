@@ -178,4 +178,4 @@ https://github.com/NimbleTerminal/ntrecord/issues with the tape and error text.
 - Installed from Homebrew: `brew install --cask nimbleterminal/tap/ntrecord`.
   In a source checkout, `task build` makes `./ntrecord`. This skill is
   built into the binary: `ntrecord skill install` refreshes it after an
-  upgrade, and `ntrecord skill` prints the copy that matches the binary.
+  upgrade, and `ntrecord skill show` prints the copy that matches the binary.

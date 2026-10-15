@@ -11,11 +11,14 @@ import (
 )
 
 func TestSkillShow(t *testing.T) {
-	for _, args := range [][]string{{"skill"}, {"skill", "show"}} {
-		out, _, err := runCLI(t, args...)
-		if err != nil || out != skills.NTRecord {
-			t.Fatalf("%v: err=%v, printed the skill: %v", args, err, out == skills.NTRecord)
-		}
+	out, _, err := runCLI(t, "skill", "show")
+	if err != nil || out != skills.NTRecord {
+		t.Fatalf("skill show: err=%v, printed the skill: %v", err, out == skills.NTRecord)
+	}
+	// Bare skill is help: the skill is long, so printing it takes asking.
+	out, _, err = runCLI(t, "skill")
+	if err != nil || !strings.Contains(out, "ntrecord skill install [FOLDER]") || strings.Contains(out, "name: ntrecord") {
+		t.Fatalf("bare skill: err=%v\n%s", err, out)
 	}
 	if !strings.HasPrefix(skills.NTRecord, "---\nname: ntrecord\n") {
 		t.Fatalf("embedded skill lacks its front matter:\n%.80s", skills.NTRecord)
