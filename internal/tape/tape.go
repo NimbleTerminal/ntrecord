@@ -162,10 +162,12 @@ func (p *parser) read(r io.Reader, name string, sourced bool) error {
 			return fail(fmt.Errorf("expected command, got %q", t.text))
 		}
 		head, timing, hasTiming := strings.Cut(t.text, "@")
-		// Ctrl+@ names a key, rather than a speed override.
-		if strings.HasSuffix(head, "+") && timing == "" {
-			head = t.text
-			hasTiming = false
+		// Ctrl+@ names a key, rather than a speed override; a timing may
+		// follow it directly or after a second @.
+		if strings.HasSuffix(head, "+") {
+			head += "@"
+			timing = strings.TrimPrefix(timing, "@")
+			hasTiming = timing != ""
 		}
 		a.Command = head
 		if hasTiming {

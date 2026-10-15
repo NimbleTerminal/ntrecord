@@ -154,7 +154,11 @@ func lex(input string) ([]token, error) {
 			t.text = input[start:i]
 		}
 		if t.kind == 'w' {
-			if t.text == "WaitPattern" || t.text == "Wait" || strings.HasPrefix(t.text, "Wait+") || strings.HasPrefix(t.text, "Wait@") {
+			// A regex follows Wait as a command, which begins its line, and
+			// WaitPattern as a setting; elsewhere either is just a word.
+			first := len(out) == 0 || out[len(out)-1].line < t.line
+			wait := t.text == "Wait" || strings.HasPrefix(t.text, "Wait+") || strings.HasPrefix(t.text, "Wait@")
+			if wait && first || t.text == "WaitPattern" && !first && out[len(out)-1].text == "Set" {
 				regexNext = true
 			} else if isCommand(t.text) {
 				regexNext = false

@@ -125,3 +125,42 @@ func TestQuoteMayFollowTimingDirectly(t *testing.T) {
 		t.Errorf("regex with a quote: %v", err)
 	}
 }
+
+// Wait arms a regular expression only as a command, and WaitPattern only as
+// the setting: elsewhere they are words, and a / after them is not a regex.
+func TestWaitWordIsNotARegexOutsideCommands(t *testing.T) {
+	ts, err := lex("Type WaitPattern /usr/bin/env\nSet FontFamily Wait /usr/x.ttf\nSet WaitPattern /a b/\nWait /c d/\nWait+Screen@1s /e/")
+	if err != nil {
+		t.Fatal(err)
+	}
+	var got []string
+	for _, tok := range ts {
+		got = append(got, string(tok.kind)+":"+tok.text)
+	}
+	want := "w:Type w:WaitPattern w:/usr/bin/env w:Set w:FontFamily w:Wait w:/usr/x.ttf w:Set w:WaitPattern r:a b w:Wait r:c d w:Wait+Screen@1s r:e"
+	if strings.Join(got, " ") != want {
+		t.Fatalf("tokens:\n%s\nwant:\n%s", strings.Join(got, " "), want)
+	}
+	p, err := Parse(strings.NewReader("Type WaitPattern /usr/bin/env"))
+	if err != nil || p.Actions[0].Text != "WaitPattern /usr/bin/env" {
+		t.Fatalf("Type: %v %+v", err, p)
+	}
+}
+
+// Ctrl+@ is a key, and like any key it takes a timing.
+func TestCtrlAtTakesTiming(t *testing.T) {
+	for _, source := range []string{"Ctrl+@100ms", "Ctrl+@@100ms"} {
+		p, err := Parse(strings.NewReader(source))
+		if err != nil {
+			t.Errorf("%s: %v", source, err)
+			continue
+		}
+		if a := p.Actions[0]; a.Command != "Ctrl+@" || a.Interval != 100*time.Millisecond {
+			t.Errorf("%s: %+v", source, a)
+		}
+	}
+	p, err := Parse(strings.NewReader("Ctrl+@"))
+	if err != nil || p.Actions[0].Command != "Ctrl+@" {
+		t.Fatalf("Ctrl+@: %v %+v", err, p)
+	}
+}
