@@ -277,9 +277,21 @@ func Run(parent context.Context, opts Options) error {
 			if opts.Config.CursorBlink {
 				step = min(d, render.BlinkHalfPeriod-recorded%render.BlinkHalfPeriod)
 			}
-			frame, err := r.FrameAfter(recorded)
+			// As realtime does, keep the last picture through a synchronized
+			// update or an image replacement, on the recorded clock; a held
+			// picture is sampled again each period until it is released.
+			current, err := r.FrameAfter(recorded)
 			if err != nil {
 				return err
+			}
+			frame := current
+			if lastEmitted != nil && r.RenderHeldAfter(recorded) {
+				frame = lastEmitted
+			} else if frame, err = r.CaptureFrameAfter(recorded); err != nil {
+				return err
+			}
+			if frame != current {
+				step = min(step, period)
 			}
 			if err = encoder.Add(captureCtx, frame, step); err != nil {
 				return err
@@ -456,7 +468,12 @@ func Run(parent context.Context, opts Options) error {
 						at = time.Duration(float64(o.at.Sub(castStart)) / speed)
 					}
 					castErr := encoder.Output(at, o.data)
-					err := errors.Join(castErr, r.Write(o.data))
+					write := r.Write
+					if virtual {
+						// Synchronized updates are held on the recorded clock.
+						write = func(b []byte) error { return r.WriteAfter(b, recorded) }
+					}
+					err := errors.Join(castErr, write(o.data))
 					if reply := r.TakeReplies(); len(reply) > 0 {
 						err = errors.Join(err, enqueue(writeRequest{data: reply}))
 					}
@@ -500,7 +517,23 @@ func Run(parent context.Context, opts Options) error {
 				case "Hold":
 					startSettle(c, func() error { return emit(ctx, time.Duration(float64(a.Duration)/speed)) })
 				case "Hide":
-					startSettle(c, func() error { visible = false; return nil })
+					startSettle(c, func() error {
+						// Like realtime's Hide, close the visible part with the
+						// screen as it is, if it changed since the last hold.
+						if visible && lastEmitted != nil {
+							frame, err := r.FrameAfter(recorded)
+							if err != nil {
+								return err
+							}
+							if frame != lastEmitted && !bytes.Equal(frame.Pix, lastEmitted.Pix) {
+								if err = emit(ctx, max(period, 10*time.Millisecond)); err != nil {
+									return err
+								}
+							}
+						}
+						visible = false
+						return nil
+					})
 				case "Show":
 					startSettle(c, func() error { visible = true; return nil })
 				case "Checkpoint":

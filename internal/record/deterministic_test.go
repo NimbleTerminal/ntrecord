@@ -5,6 +5,8 @@ import (
 	"context"
 	"crypto/sha256"
 	"fmt"
+	"image"
+	"image/draw"
 	"image/gif"
 	"os"
 	"path/filepath"
@@ -203,5 +205,55 @@ func TestDeterministicSleepProducesHolds(t *testing.T) {
 		case <-ctx.Done():
 			t.Fatal("virtual Sleep waited for wall time")
 		}
+	}
+}
+
+// screens composes a GIF's frames and counts the distinct pictures shown.
+func screens(t *testing.T, b []byte) int {
+	t.Helper()
+	g, err := gif.DecodeAll(bytes.NewReader(b))
+	if err != nil {
+		t.Fatal(err)
+	}
+	canvas := image.NewRGBA(image.Rect(0, 0, g.Config.Width, g.Config.Height))
+	seen := map[[32]byte]bool{}
+	for _, f := range g.Image {
+		draw.Draw(canvas, f.Bounds(), f, f.Bounds().Min, draw.Over)
+		seen[sha256.Sum256(canvas.Pix)] = true
+	}
+	return len(seen)
+}
+
+// Hide records the screen as it was when the tape hid it, as realtime does:
+// output after the last hold is not lost because the next one is hidden.
+func TestDeterministicHideKeepsTheLastScreen(t *testing.T) {
+	plain, _ := runDeterministic(t, "Sleep 200ms\nHide\nShow\nSleep 100ms\n")
+	typed, _ := runDeterministic(t, "Sleep 200ms\nType@0ms \"x\"\nHide\nBackspace@0ms\nShow\nSleep 100ms\n")
+	if p, x := screens(t, plain), screens(t, typed); x != p+1 {
+		t.Fatalf("the x typed before Hide was never shown: %d pictures, %d without it", x, p)
+	}
+}
+
+// A synchronized update left open holds the previous picture for a second of
+// recorded time, as realtime holds it for a second of wall time.
+func TestDeterministicHoldsSynchronizedUpdate(t *testing.T) {
+	b, _ := runDeterministic(t, "Type@0ms \"printf '\\033[?2026h\\033[41mRED'\"\nEnter@0ms\nSleep 3s\n")
+	g, err := gif.DecodeAll(bytes.NewReader(b))
+	if err != nil {
+		t.Fatal(err)
+	}
+	canvas := image.NewRGBA(image.Rect(0, 0, g.Config.Width, g.Config.Height))
+	var red time.Duration
+	for i, f := range g.Image {
+		draw.Draw(canvas, f.Bounds(), f, f.Bounds().Min, draw.Over)
+		for p := 0; p < len(canvas.Pix); p += 4 {
+			if r, gr, b := int(canvas.Pix[p]), int(canvas.Pix[p+1]), int(canvas.Pix[p+2]); r-gr > 70 && r-b > 70 {
+				red += time.Duration(g.Delay[i]) * 10 * time.Millisecond
+				break
+			}
+		}
+	}
+	if red < 1500*time.Millisecond || red > 2500*time.Millisecond {
+		t.Fatalf("red shown for %v of a 3s hold; want about 2s, after the 1s synchronized-update hold", red)
 	}
 }

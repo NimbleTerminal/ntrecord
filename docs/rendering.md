@@ -125,4 +125,4 @@ The pinned libghostty removes an image as soon as a chunked replacement starts, 
 
 libghostty does not report uploads in progress, so deleting an image on purpose while its placeholder cells stay on screen gets the same short delay. An abandoned upload can never hold the recording indefinitely, and a screenshot always shows the terminal's current state.
 
-Synchronized output (mode 2026) is honored: a half-drawn frame is kept out of the recording, with a one-second timeout in case the program never finishes.
+Synchronized output (mode 2026) is honored: a half-drawn frame is kept out of the recording, with a one-second timeout in case the program never finishes. In deterministic mode both that timeout and the image delay above run on the recorded clock, as they do for `ntrecord render`.
