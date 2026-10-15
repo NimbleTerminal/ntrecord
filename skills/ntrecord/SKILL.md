@@ -176,4 +176,4 @@ https://github.com/NimbleTerminal/ntrecord/issues with the tape and error text.
 - Don't use `Sleep` as a substitute for `Wait` on real work.
 - Keep generated GIF/MP4 out of git unless the user wants them committed.
 - Installed from Homebrew: `brew install --cask nimbleterminal/tap/ntrecord`.
-  In a source checkout, `task build` makes `bin/ntrecord`.
+  In a source checkout, `task build` makes `./ntrecord`.

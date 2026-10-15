@@ -69,8 +69,8 @@ Try the bundled Unicode showcase from the repository root:
 
 ```sh
 task build
-bin/ntrecord examples/unicode.tape
-bin/ntrecord play examples/unicode.cast
+./ntrecord examples/unicode.tape
+./ntrecord play examples/unicode.cast
 ```
 
 This produces GIF, PNG, and cast outputs showing accents, symbols, cell graphics,
@@ -105,7 +105,7 @@ For the ntcharts shader example, ask for direct transfer. ntcharts recognizes th
 ```sh
 cd /path/to/ntcharts/examples/shaders
 env -u NO_COLOR \
-  /path/to/ntrecord/bin/ntrecord record -o /tmp/shaders.gif -cols 80 -rows 24 -- \
+  /path/to/ntrecord/ntrecord record -o /tmp/shaders.gif -cols 80 -rows 24 -- \
   go run . -medium=direct -fullscreen -fps=20 -duration=8s
 ```
 

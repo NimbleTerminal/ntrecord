@@ -35,7 +35,7 @@ jobs:
       - name: Check clean and rebuild
         run: |
           task clean
-          test ! -e bin/ntrecord
+          test ! -e ntrecord
           task build
       - uses: actions/upload-artifact@v7
         with:

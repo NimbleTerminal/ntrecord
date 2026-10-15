@@ -28,35 +28,35 @@ tasks:
     desc: Regenerate internal/terminfo from the pinned Ghostty revision (needs tic)
     cmds: ['sh scripts/terminfo.sh']
   build:
-    desc: Build bin/ntrecord
+    desc: Build ./ntrecord
     deps: [native-check]
     # Let Go handle caching: native libraries, compiler flags, and workspace
     # dependencies can change outside Task's source globs.
     env:
       NTRECORD_VERSION: '{{.VERSION}}'
-    cmds: ['go build -mod=readonly -trimpath -ldflags "-X main.version=$NTRECORD_VERSION" -o bin/ntrecord .']
+    cmds: ['go build -mod=readonly -trimpath -ldflags "-X main.version=$NTRECORD_VERSION" -o ntrecord .']
   run:
     desc: Run ntrecord (pass a tape path or CLI arguments after --)
     interactive: true
     deps: [build]
-    cmds: ['bin/ntrecord {{.CLI_ARGS}}']
+    cmds: ['./ntrecord {{.CLI_ARGS}}']
   play:
     desc: Play an asciicast in a Kitty-capable terminal
     interactive: true
     deps: [build]
-    cmds: ['bin/ntrecord play {{.CLI_ARGS}}']
+    cmds: ['./ntrecord play {{.CLI_ARGS}}']
   record:
     desc: Record a live PTY (pass recorder flags and command after --)
     interactive: true
     deps: [build]
-    cmds: ['bin/ntrecord record {{.CLI_ARGS}}']
+    cmds: ['./ntrecord record {{.CLI_ARGS}}']
   install:
     desc: Install ntrecord into the Go bin directory
     deps: [native-check]
     cmds: [go install -mod=readonly -trimpath .]
   clean:
     desc: Remove binaries, release archives, and Task state (keep dependencies and recordings)
-    cmds: [rm -rf bin dist .task]
+    cmds: [rm -rf ntrecord dist .task]
   clean:all:
     desc: Also remove project-local tools, native libraries, downloads, and Zig caches
     cmds:
@@ -133,15 +133,15 @@ tasks:
   demo:kitty:
     desc: Record examples/kitty.gif (direct PNG with a query handshake)
     deps: [build]
-    cmds: [bin/ntrecord examples/kitty.tape]
+    cmds: [./ntrecord examples/kitty.tape]
   demo:text:
     desc: Record examples/text.gif
     deps: [build]
-    cmds: [bin/ntrecord examples/text.tape]
+    cmds: [./ntrecord examples/text.tape]
   demo:placeholder:
     desc: Record examples/kitty-placeholder.gif (ntcharts-style Unicode placements)
     deps: [build]
-    cmds: [bin/ntrecord examples/kitty-placeholder.tape]
+    cmds: [./ntrecord examples/kitty-placeholder.tape]
   demos:
     desc: Record the example GIFs
     cmds:
@@ -152,12 +152,12 @@ tasks:
     desc: Record Kitty graphics to MP4 and WebM (requires FFmpeg)
     deps: [build, video-check]
     cmds:
-      - bin/ntrecord examples/kitty-mp4.tape
-      - bin/ntrecord examples/kitty-webm.tape
+      - ./ntrecord examples/kitty-mp4.tape
+      - ./ntrecord examples/kitty-webm.tape
   demo:language:
     desc: Record the VHS language demo, text checkpoints, and PNG screenshot
     deps: [build]
-    cmds: [bin/ntrecord examples/language.tape]
+    cmds: [./ntrecord examples/language.tape]
 
   docs:hugo:serve:
     desc: Serve the user guide while editing it (needs hugo, extended; run `git submodule update --init` once)

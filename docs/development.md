@@ -18,7 +18,7 @@ task run -- examples/kitty.tape
 task demo:text
 ```
 
-The first build downloads **Zig 0.16.0** and **pkgconf 2.5.1** (both SHA-256 verified), builds pkgconf and the pinned libghostty-vt, and writes `bin/ntrecord`. Everything native lives in `.deps/`, which git ignores. Nothing needs sudo, a Homebrew Zig, shell profile changes, or `/tmp`. The first build needs network access and takes a few minutes; later builds reuse what it made. `task deps` runs the native setup on its own and passes Zig build flags after `--`. The build, test, and install tasks run it for you when the library is missing.
+The first build downloads **Zig 0.16.0** and **pkgconf 2.5.1** (both SHA-256 verified), builds pkgconf and the pinned libghostty-vt, and writes `./ntrecord`. Everything native lives in `.deps/`, which git ignores. Nothing needs sudo, a Homebrew Zig, shell profile changes, or `/tmp`. The first build needs network access and takes a few minutes; later builds reuse what it made. `task deps` runs the native setup on its own and passes Zig build flags after `--`. The build, test, and install tasks run it for you when the library is missing.
 
 Task sets `CGO_ENABLED=1`, finds the local pkgconf through `scripts/pkg-config.sh`, and adds the local library to `PKG_CONFIG_PATH`, keeping any path you already have. Without Task:
 
@@ -27,7 +27,7 @@ sh scripts/build-libghostty.sh
 export PKG_CONFIG="$PWD/scripts/pkg-config.sh"
 export PKG_CONFIG_PATH="$PWD/.deps/libghostty-vt/share/pkgconfig${PKG_CONFIG_PATH:+:$PKG_CONFIG_PATH}"
 "$PKG_CONFIG" --static --cflags --libs libghostty-vt-static
-CGO_ENABLED=1 go build -o bin/ntrecord .
+CGO_ENABLED=1 go build -o ntrecord .
 go run . examples/kitty.tape
 go run . examples/text.tape
 ```
@@ -65,7 +65,7 @@ PKG_CONFIG_PATH="$PWD/.deps/ghostty-linux-amd64/share/pkgconfig" \
   CGO_ENABLED=1 GOOS=linux GOARCH=amd64 \
   CC="$PWD/.deps/tools/bin/zig cc -target x86_64-linux-gnu" \
   CXX="$PWD/.deps/tools/bin/zig c++ -target x86_64-linux-gnu" \
-  go build -o bin/ntrecord-linux-amd64 .
+  go build -o dist/ntrecord-linux-amd64 .
 ```
 
 Or run `task deps -- -Dtarget=x86_64-linux-gnu`, with a separate `GHOSTTY_PREFIX` so it does not overwrite the host build.
@@ -190,7 +190,7 @@ GOPROXY=direct go list -m -json nimbleterminal.dev/ntrecord@main
 
 Configuration environment variables now use `NTRECORD_` (for example,
 `NTRECORD_FONT_PATH`), and recorded programs see `TERM_PROGRAM=ntrecord`.
-The renamed command is built as `bin/ntrecord`. Existing tape and cast file
+The renamed command is built as `./ntrecord`. Existing tape and cast file
 formats are unchanged. The user guide is hosted at
 `https://nimbleterminal.github.io/ntrecord/` separately from Go module discovery.
 
