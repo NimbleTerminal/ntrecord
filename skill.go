@@ -99,6 +99,9 @@ func installSkill(where string, stdout, stderr io.Writer) error {
 	}
 	for _, h := range homes {
 		dir := filepath.Join(h.root, "ntrecord")
+		if err := clearDanglingLink(dir, stderr); err != nil {
+			return err
+		}
 		if err := os.MkdirAll(dir, 0o755); err != nil {
 			return err
 		}
@@ -117,6 +120,29 @@ func installSkill(where string, stdout, stderr io.Writer) error {
 		}
 		fmt.Fprintln(stdout, path)
 	}
+	return nil
+}
+
+// clearDanglingLink removes dir when it is a symbolic link to nothing, such as
+// one left by a moved checkout, so a real folder can take its place. A link to
+// a folder that exists was made on purpose: it is neither replaced nor written
+// through, and the error says where it points.
+func clearDanglingLink(dir string, stderr io.Writer) error {
+	info, err := os.Lstat(dir)
+	if err != nil || info.Mode()&os.ModeSymlink == 0 {
+		return nil
+	}
+	target, err := os.Readlink(dir)
+	if err != nil {
+		return err
+	}
+	if _, err := os.Stat(dir); err == nil {
+		return fmt.Errorf("%s is a link to %s; remove it to install the skill from this binary, or keep it to use that copy", dir, target)
+	}
+	if err := os.Remove(dir); err != nil {
+		return err
+	}
+	fmt.Fprintf(stderr, "ntrecord: replaced a broken link to %s: %s\n", target, dir)
 	return nil
 }
 

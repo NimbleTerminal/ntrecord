@@ -132,3 +132,39 @@ func TestSkillVerbRejectsAndHelps(t *testing.T) {
 		t.Fatalf("help wrote files: %v", entries)
 	}
 }
+
+func TestSkillInstallReplacesDanglingLink(t *testing.T) {
+	// A link left by a moved or deleted checkout points nowhere; it is
+	// replaced by a real folder, as nothing is lost.
+	root := t.TempDir()
+	link := filepath.Join(root, "ntrecord")
+	if err := os.Symlink(filepath.Join(root, "gone", "ntrecord"), link); err != nil {
+		t.Fatal(err)
+	}
+	_, errOut, err := runCLI(t, "skill", "install", root)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if info, err := os.Lstat(link); err != nil || !info.IsDir() {
+		t.Fatalf("%s is not a folder now: %v", link, err)
+	}
+	if !strings.Contains(errOut, "replaced a broken link") {
+		t.Fatalf("stderr does not mention the link: %q", errOut)
+	}
+}
+
+func TestSkillInstallRefusesLinkedFolder(t *testing.T) {
+	// A link to a live folder, such as a source checkout's skills/ntrecord,
+	// is someone's on purpose; it is not written through or replaced.
+	root, target := t.TempDir(), t.TempDir()
+	if err := os.Symlink(target, filepath.Join(root, "ntrecord")); err != nil {
+		t.Fatal(err)
+	}
+	_, _, err := runCLI(t, "skill", "install", root)
+	if err == nil || !strings.Contains(err.Error(), target) {
+		t.Fatalf("err = %v, want one naming %s", err, target)
+	}
+	if entries, _ := os.ReadDir(target); len(entries) != 0 {
+		t.Fatalf("wrote through the link: %v", entries)
+	}
+}
