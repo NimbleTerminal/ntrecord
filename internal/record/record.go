@@ -408,7 +408,17 @@ func Run(parent context.Context, opts Options) error {
 			tailLimit.Stop()
 		}
 	}()
+	// When a cap ends a settle or the tail, output already read from the PTY
+	// is still applied: capped runs that many more output events first.
+	var capped func()
+	cappedEvents := 0
 	for !finished {
+		if capped != nil && cappedEvents <= 0 {
+			f := capped
+			capped = nil
+			f()
+			continue
+		}
 		var send chan writeRequest
 		var next writeRequest
 		if len(queue) > 0 {
@@ -430,8 +440,15 @@ func Run(parent context.Context, opts Options) error {
 		case result := <-writeResults:
 			if errors.Is(result.err, syscall.EIO) {
 				// Slave closure can reach the writer before the reader delivers
-				// its final bytes. Drain those bytes and use the child exit status.
+				// its final bytes. Drain those bytes and use the child exit
+				// status; input that never arrived fails the steps it belongs to.
 				writerClosed = true
+				undelivered := fmt.Errorf("program exited before input was delivered: %w", result.err)
+				for _, w := range append([]writeRequest{result.request}, queue...) {
+					if w.ack != nil {
+						w.ack <- undelivered
+					}
+				}
 				queue, queuedBytes = nil, 0
 				continue
 			}
@@ -442,10 +459,13 @@ func Run(parent context.Context, opts Options) error {
 				runErr, finished = result.err, true
 			}
 		case ev := <-events:
+			cappedEvents--
 			if ev.scriptDone {
 				runErr = ev.err
 				if runErr != nil {
-					finished = true
+					// After the program closed the PTY, wait for its EOF to
+					// report the exit status as well.
+					finished = !writerClosed
 				} else {
 					quiet = time.NewTimer(100 * time.Millisecond)
 					tailLimit = time.NewTimer(time.Second)
@@ -632,7 +652,13 @@ func Run(parent context.Context, opts Options) error {
 				finishSettle()
 			}
 		case <-settleLimitC:
-			finishSettle()
+			settleLimitC = nil
+			limited := settle // the quiet timer may finish it first, and another start
+			capped, cappedEvents = func() {
+				if settle == limited {
+					finishSettle()
+				}
+			}, len(events)
 		case <-quietC:
 			// Prefer bytes already queued when the quiet timer fired.
 			if len(events) == 0 {
@@ -641,7 +667,8 @@ func Run(parent context.Context, opts Options) error {
 				quiet.Reset(100 * time.Millisecond)
 			}
 		case <-tailC:
-			finished = true
+			tailC = nil
+			capped, cappedEvents = func() { finished = true }, len(events)
 		case <-tick:
 			if err := capture(ctx, time.Now(), false); err != nil {
 				runErr, finished = err, true
