@@ -43,9 +43,17 @@ func skillCommand(args []string, stdout, stderr io.Writer) error {
 		_, err := fmt.Fprint(stdout, skills.NTRecord)
 		return err
 	case sub == "install" && len(args) == 0:
-		return installSkill("auto", stdout, stderr)
+		homes, err := detectedHomes()
+		if err != nil {
+			return err
+		}
+		return installSkill(homes, stdout, stderr)
 	case sub == "install" && len(args) == 1:
-		return installSkill(args[0], stdout, stderr)
+		root, err := expandHome(args[0])
+		if err != nil {
+			return err
+		}
+		return installSkill([]skillHome{{root: root}}, stdout, stderr)
 	case sub == "show" || sub == "install":
 		return fmt.Errorf("skill %s: too many arguments (see ntrecord skill --help)", sub)
 	}
@@ -78,27 +86,27 @@ func skillHomes() []skillHome {
 	}
 }
 
-// installSkill writes the embedded skill as ntrecord/SKILL.md under the shared
-// agents folder and the folder of each agent found on this machine, or under
-// the one named. The paths written go to stdout, one to a line; who each is
-// for goes to stderr. A skill already there is updated: it is meant to match
-// the binary.
-func installSkill(where string, stdout, stderr io.Writer) error {
+// detectedHomes are the shared agents folder and the folder of each agent
+// found on this machine.
+func detectedHomes() ([]skillHome, error) {
 	var homes []skillHome
-	if where == "auto" {
-		for _, h := range skillHomes() {
-			if h.detect == "" {
-				homes = append(homes, h)
-			} else if _, err := os.Stat(h.detect); err == nil {
-				homes = append(homes, h)
-			}
+	for _, h := range skillHomes() {
+		if h.detect == "" {
+			homes = append(homes, h)
+		} else if _, err := os.Stat(h.detect); err == nil {
+			homes = append(homes, h)
 		}
-		if len(homes) == 0 {
-			return errors.New("no home folder to install under; name one: ntrecord skill install $HOME/.agents/skills")
-		}
-	} else {
-		homes = []skillHome{{root: expandHome(where)}}
 	}
+	if len(homes) == 0 {
+		return nil, errors.New("no home folder to install under; name one: ntrecord skill install $HOME/.agents/skills")
+	}
+	return homes, nil
+}
+
+// installSkill writes the embedded skill as ntrecord/SKILL.md under each home.
+// The paths written go to stdout, one to a line; who each is for goes to
+// stderr. A skill already there is updated: it is meant to match the binary.
+func installSkill(homes []skillHome, stdout, stderr io.Writer) error {
 	for _, h := range homes {
 		dir := filepath.Join(h.root, "ntrecord")
 		if err := clearDanglingLink(dir, stderr); err != nil {
@@ -170,11 +178,14 @@ func writeFileAtomic(path string, data []byte, mode os.FileMode) error {
 }
 
 // expandHome resolves a leading ~/ , which the shell leaves alone after =.
-func expandHome(path string) string {
-	if path == "~" || strings.HasPrefix(path, "~/") {
-		if home, err := os.UserHomeDir(); err == nil {
-			return filepath.Join(home, path[1:])
-		}
+// Without a home folder it is an error, not a folder named ~.
+func expandHome(path string) (string, error) {
+	if path != "~" && !strings.HasPrefix(path, "~/") {
+		return path, nil
 	}
-	return path
+	home, err := os.UserHomeDir()
+	if err != nil {
+		return "", fmt.Errorf("cannot resolve %s: %w", path, err)
+	}
+	return filepath.Join(home, path[1:]), nil
 }
