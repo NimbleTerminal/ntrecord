@@ -108,9 +108,28 @@ func stamp(d time.Duration) string {
 	return fmt.Sprintf("%d:%02d", seconds/60, seconds%60)
 }
 
-type keyDecoder struct{ pending string }
+// escapeTimeout is how long a lone Escape waits for the rest of a sequence
+// before it is taken as a key of its own.
+const escapeTimeout = 50 * time.Millisecond
 
-func (k *keyDecoder) feed(b []byte) []string {
+type keyDecoder struct {
+	pending string
+	escAt   time.Time // when pending became a lone Escape
+}
+
+// feed decodes the keys in b, read at now. Call it after every read, even an
+// empty one, so a lone Escape expires instead of swallowing the next key.
+func (k *keyDecoder) feed(b []byte, now time.Time) []string {
+	if k.pending == "\x1b" && !now.Before(k.escAt.Add(escapeTimeout)) {
+		k.pending = ""
+	}
+	defer func() {
+		if k.pending != "\x1b" {
+			k.escAt = time.Time{}
+		} else if k.escAt.IsZero() {
+			k.escAt = now
+		}
+	}()
 	k.pending += string(b)
 	var keys []string
 	for len(k.pending) > 0 {

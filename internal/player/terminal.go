@@ -141,7 +141,7 @@ func Run(ctx context.Context, path string, opts Options) (result error) {
 			}
 			return err
 		}
-		for _, key := range keys.feed(b) {
+		for _, key := range keys.feed(b, time.Now()) {
 			now := time.Now()
 			switch key {
 			case "quit":

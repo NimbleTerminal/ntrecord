@@ -9,6 +9,7 @@ import (
 	"io"
 	"strings"
 	"testing"
+	"time"
 )
 
 func TestGraphicsChunksSwapAndCleanup(t *testing.T) {
@@ -82,15 +83,34 @@ func TestGraphicsChunksSwapAndCleanup(t *testing.T) {
 
 func TestKeysAcrossReadsIgnoreTerminalReplies(t *testing.T) {
 	var k keyDecoder
-	if got := k.feed([]byte("\x1b[")); len(got) != 0 {
+	if got := k.feed([]byte("\x1b["), time.Time{}); len(got) != 0 {
 		t.Fatal(got)
 	}
-	got := k.feed([]byte("D \x1b_Gi=12;some reply q r\x1b\\+\x1b[Fq"))
+	got := k.feed([]byte("D \x1b_Gi=12;some reply q r\x1b\\+\x1b[Fq"), time.Time{})
 	if strings.Join(got, ",") != "left,toggle,faster,end,quit" {
 		t.Fatal(got)
 	}
 	if title := safeTitle("bad\x1b]52;c;payload\a.cast"); strings.ContainsAny(title, "\x1b\a") {
 		t.Fatal(title)
+	}
+}
+
+func TestLoneEscapeDoesNotSwallowTheNextKey(t *testing.T) {
+	// Escape on its own is a key, not the start of a sequence, once nothing
+	// follows it for a moment; the key after it still counts.
+	var k keyDecoder
+	start := time.Now()
+	if got := k.feed([]byte("\x1b"), start); len(got) != 0 {
+		t.Fatal(got)
+	}
+	k.feed(nil, start.Add(escapeTimeout))
+	if got := k.feed([]byte("q"), start.Add(escapeTimeout+time.Millisecond)); strings.Join(got, ",") != "quit" {
+		t.Fatalf("q after a lone Escape: %v", got)
+	}
+	// A sequence split across reads within the timeout still decodes.
+	k.feed([]byte("\x1b"), start)
+	if got := k.feed([]byte("[D"), start.Add(escapeTimeout/2)); strings.Join(got, ",") != "left" {
+		t.Fatalf("split arrow: %v", got)
 	}
 }
 
