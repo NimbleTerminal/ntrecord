@@ -30,11 +30,11 @@ Braille, box drawing, block characters, symbols, and color emoji are drawn witho
 
 ntrecord tells the program it is running in Ghostty (`TERM=xterm-ghostty`), which is how most programs learn that a terminal can draw images, so most need no setup. If nothing shows up:
 
-- **`NO_COLOR` must not be set.** Placeholder images carry their identity in text colors, so a program that turns colors off cannot show them. Run it with `env -u NO_COLOR`.
+- **Don't set `NO_COLOR` with a tape's `Env`.** Placeholder images carry their identity in text colors, so a program that turns colors off cannot show them. ntrecord already removes your own `NO_COLOR` from the program's environment.
 - **Ask for direct image transfer** if the program has a choice of how to send images. For ntcharts' shader example:
 
 ```sh
-env -u NO_COLOR ntrecord record -o shaders.gif -cols 80 -rows 24 -- \
+ntrecord record -o shaders.gif -cols 80 -rows 24 -- \
   go run . -medium=direct -fullscreen -fps=20 -duration=8s
 ```
 

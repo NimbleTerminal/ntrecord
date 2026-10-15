@@ -55,9 +55,6 @@ func Run(w io.Writer, o Options) bool {
 		checkTerminfo(),
 		checkFFmpeg(),
 	}
-	if r, bad := checkNoColor(); bad {
-		results = append(results, r)
-	}
 	var warns, fails int
 	for _, r := range results {
 		label := map[status]string{ok: "ok  ", warn: "warn", fail: "FAIL"}[r.status]
@@ -191,13 +188,4 @@ func checkFFmpeg() result {
 		return result{"ffmpeg", warn, fmt.Sprintf("%s at %s lacks encoders: %s", info.Version, info.Path, strings.Join(missing, ", "))}
 	}
 	return result{"ffmpeg", ok, fmt.Sprintf("%s (libx264, libvpx-vp9)", info.Version)}
-}
-
-// checkNoColor flags NO_COLOR, which stops programs from showing Kitty
-// placeholder images because their foreground color carries the image ID.
-func checkNoColor() (result, bool) {
-	if os.Getenv("NO_COLOR") == "" {
-		return result{}, false
-	}
-	return result{"NO_COLOR", warn, "is set: programs that honor it cannot show Kitty placeholder images (use env -u NO_COLOR)"}, true
 }

@@ -47,10 +47,12 @@ func TestFailsWhenTheShellIsMissing(t *testing.T) {
 	}
 }
 
-func TestNoColorWarnsAboutPlaceholderImages(t *testing.T) {
+func TestNoColorIsNotAWarning(t *testing.T) {
+	// The recorder drops NO_COLOR from the program's environment, so the
+	// user's own setting cannot blank placeholder images.
 	t.Setenv("NO_COLOR", "1")
 	out, ok := run(t, Options{})
-	if !ok || !strings.Contains(out, "NO_COLOR") {
+	if !ok || strings.Contains(out, "NO_COLOR") {
 		t.Fatalf("ok=%v\n%s", ok, out)
 	}
 }

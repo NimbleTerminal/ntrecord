@@ -135,9 +135,8 @@ ntrecord render session.cast -o s.mp4 -fps 30 -speed 2 -theme "Dracula"
 - Built in: Go Mono, with bundled Noto Symbols 2 and Noto Color Emoji as
   fallbacks, then installed fonts that cover a whole grapheme cluster. Box
   drawing, blocks and braille are drawn geometrically. CJK and other scripts
-  need an installed outline font. Details: `docs/rendering.md`. Older
-  builds lacked fallbacks, so for anything beyond plain text record a quick
-  `Screenshot` rather than assuming. If a glyph comes out as a replacement
+  need an installed outline font. Details: `docs/rendering.md`. For anything
+  beyond plain text, record a quick `Screenshot` rather than assuming. If a glyph comes out as a replacement
   mark, choose a font that has it: `Set FontFamily "Name"` or a
   `.ttf`/`.otf`/`.ttc` path (`-font` for `render` and `play`; `record` has no
   `-font`, so record a `.cast` and `render` it). A path font is used for every
@@ -150,8 +149,9 @@ ntrecord render session.cast -o s.mp4 -fps 30 -speed 2 -theme "Dracula"
 - Programs see `TERM=xterm-ghostty`, `TERM_PROGRAM=ntrecord`. Kitty graphics
   work for **direct** transfer (PNG/RGB/RGBA, placements, Unicode
   placeholders). File and shared-memory transfer, animation frames, and
-  relative placements do not. If images don't show: `env -u NO_COLOR …`,
-  choose the program's "direct" transfer option, or force its Kitty switch.
+  relative placements do not. If images don't show, choose the program's
+  "direct" transfer option or force its Kitty switch. ntrecord removes
+  `NO_COLOR` from the program's environment; don't set it back with `Env`.
 
 ## Common errors
 
@@ -162,7 +162,7 @@ ntrecord render session.cast -o s.mp4 -fps 30 -speed 2 -theme "Dracula"
 | `.mp4 output requires ffmpeg` | `brew install ffmpeg` / `apt-get install ffmpeg`; needs `libx264` / `libvpx-vp9` |
 | `recording has no visible frames` | Tape ended while `Hide`den; add `Show` |
 | `N of M tapes invalid` | See the `file:line:col` lines above it |
-| GIF too large / hits 512 MiB | Smaller `Columns/Rows/FontSize`, lower `Framerate`, shorter, or use `.mp4`/`.webm` |
+| `GIF encoding exceeds … byte memory budget` | Smaller `Columns/Rows/FontSize`, lower `Framerate`, shorter, or use `.mp4`/`.webm` |
 | Prompt isn't `$` | A shell rc file replaced it; use default `/bin/sh`, or `Hide` setup then `Show` |
 | Replacement mark for a glyph | Font lacks it; set `FontFamily` (see Fonts above) |
 
@@ -176,4 +176,6 @@ https://github.com/NimbleTerminal/ntrecord/issues with the tape and error text.
 - Don't use `Sleep` as a substitute for `Wait` on real work.
 - Keep generated GIF/MP4 out of git unless the user wants them committed.
 - Installed from Homebrew: `brew install --cask nimbleterminal/tap/ntrecord`.
-  In a source checkout, `task build` makes `./ntrecord`.
+  In a source checkout, `task build` makes `./ntrecord`. This skill is
+  built into the binary: `ntrecord skill install` refreshes it after an
+  upgrade, and `ntrecord skill` prints the copy that matches the binary.

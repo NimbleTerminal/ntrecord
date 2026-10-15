@@ -96,7 +96,7 @@ Not supported: animation frames, relative placements, and shared-memory, regular
 
 Recorded programs run with `TERM=xterm-ghostty`, the name most programs check to learn that a terminal draws Kitty graphics. The matching terminfo entry is generated from the pinned Ghostty revision (`task terminfo`) and embedded in the binary. For the length of a recording it is installed in a private directory and exposed through `TERMINFO`, so terminfo readers work on machines without Ghostty. A tape's `Env TERM ...` overrides it, and `TERM_PROGRAM` is `ntrecord`.
 
-`NO_COLOR` must be unset. Placeholder images keep their image ID in the foreground color of the cell, so a program that turns colors off cannot show them.
+Recorded programs do not see `NO_COLOR`: placeholder images keep their image ID in the foreground color of the cell, so a program that turned colors off could not show them. ntrecord removes it from their environment; don't set it again with a tape's `Env`.
 
 ### Recording ntcharts
 
@@ -104,8 +104,7 @@ For the ntcharts shader example, ask for direct transfer. ntcharts recognizes th
 
 ```sh
 cd /path/to/ntcharts/examples/shaders
-env -u NO_COLOR \
-  /path/to/ntrecord/ntrecord record -o /tmp/shaders.gif -cols 80 -rows 24 -- \
+/path/to/ntrecord/ntrecord record -o /tmp/shaders.gif -cols 80 -rows 24 -- \
   go run . -medium=direct -fullscreen -fps=20 -duration=8s
 ```
 
