@@ -8,6 +8,7 @@ import (
 	"path/filepath"
 	"strings"
 
+	"golang.org/x/term"
 	"nimbleterminal.dev/ntrecord/skills"
 )
 
@@ -17,7 +18,8 @@ const skillUsage = `Usage: ntrecord skill show
 show prints the skill that teaches an agent to use ntrecord.
 install writes it as ntrecord/SKILL.md under the shared ~/.agents/skills folder
 and the skills folder of each agent found here (Claude Code, Kimi Code), or
-under FOLDER alone. The paths written go to stdout, one to a line.`
+under FOLDER alone. When stdout is not a terminal, the paths written go to it,
+one to a line.`
 
 // skillCommand is the skill verb: show the skill, or install it.
 func skillCommand(args []string, stdout, stderr io.Writer) error {
@@ -38,6 +40,12 @@ func skillCommand(args []string, stdout, stderr io.Writer) error {
 		return nil
 	}
 	sub, args := args[0], args[1:]
+	// The messages on stderr name each path written; print the bare paths only
+	// when stdout goes to a script rather than a terminal.
+	paths := stdout
+	if f, ok := stdout.(*os.File); ok && term.IsTerminal(int(f.Fd())) {
+		paths = io.Discard
+	}
 	switch {
 	case sub == "show" && len(args) == 0:
 		_, err := fmt.Fprint(stdout, skills.NTRecord)
@@ -47,13 +55,13 @@ func skillCommand(args []string, stdout, stderr io.Writer) error {
 		if err != nil {
 			return err
 		}
-		return installSkill(homes, stdout, stderr)
+		return installSkill(homes, paths, stderr)
 	case sub == "install" && len(args) == 1:
 		root, err := expandHome(args[0])
 		if err != nil {
 			return err
 		}
-		return installSkill([]skillHome{{root: root}}, stdout, stderr)
+		return installSkill([]skillHome{{root: root}}, paths, stderr)
 	case sub == "show" || sub == "install":
 		return fmt.Errorf("skill %s: too many arguments (see ntrecord skill --help)", sub)
 	}
@@ -82,7 +90,7 @@ func skillHomes() []skillHome {
 	return []skillHome{
 		{"Claude Code", filepath.Join(home, ".claude"), filepath.Join(home, ".claude", "skills")},
 		{"Kimi Code", kimi, filepath.Join(kimi, "skills")},
-		{"shared agents folder (Codex and others)", "", shared},
+		{"shared agents folder", "", shared},
 	}
 }
 

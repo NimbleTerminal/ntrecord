@@ -2,6 +2,9 @@
 
 ## Unreleased
 
+- `ntrecord skill install` prints each path once on a terminal; the bare paths
+  go to stdout only when it is redirected, for scripts.
+
 ## `v0.2.0` (2026-10-17)
 
 ### New
