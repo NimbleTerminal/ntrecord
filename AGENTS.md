@@ -55,4 +55,6 @@ In the render path, wrap products that feed a sum as `float32(a*b)`: arm64 fuses
 - `docs/tapes.md`, `docs/rendering.md`, `docs/development.md` are reference; `docs/hugo/content/guide/` is the user guide (Hugo, hugo-book theme submodule). A new guide page needs `title`, `weight`, and a link from `guide/_index.md`.
 - `skills/ntrecord/SKILL.md` is the agent skill, embedded in the binary. When CLI flags, tape behavior, defaults, or error messages change, update it too — it quotes error text verbatim.
 
+- `CHANGELOG.md`: add user-visible changes under `Unreleased`, briefly and from the user's side. Releasing is in `docs/development.md` ("Releases and Homebrew").
+
 Commits use conventional prefixes (`feat:`, `fix:`, `docs:`, `build:`, `test:`, `ci:`).

@@ -144,6 +144,27 @@ task release           # macOS: build an unsigned snapshot in dist/, publish not
 
 The release workflow packages pull requests that change the packaging, and it can be run by hand as a snapshot. It unpacks the archives on all four native platforms and checks the version, text GIFs, and Kitty PNG GIFs without installing libghostty. Pushing a `v*` tag publishes only after those checks and `task ci` pass. Snapshots and prereleases do not update Homebrew.
 
+To publish a release, with `main` pushed and its `test` run green:
+
+1. In `CHANGELOG.md`, rename `Unreleased` to the version and date, such as ``## `v0.2.0` (2026-10-17)``, and add an empty `Unreleased` above it. Commit and push, and wait for `test` to pass.
+2. Tag that commit and push the tag:
+
+   ```sh
+   git tag -a v0.2.0 -m "ntrecord v0.2.0"
+   git push origin v0.2.0
+   ```
+
+3. Watch the release workflow: `gh run watch "$(gh run list --workflow release.yml --limit 1 --json databaseId -q '.[0].databaseId')"`.
+4. Replace GoReleaser's commit list with the changelog section:
+
+   ```sh
+   awk '/^## `v0.2.0`/{f=1;next} /^## /{f=0} f' CHANGELOG.md | gh release edit v0.2.0 --notes-file -
+   ```
+
+5. Check the result: `gh release view v0.2.0`, then `brew update && brew upgrade ntrecord && ntrecord --version`.
+
+A tag with a suffix, such as `v0.2.0-rc.1`, publishes a prerelease and leaves Homebrew alone. If the workflow fails before publishing, fix the problem on `main`, then move the tag: `git tag -d v0.2.0 && git push origin :v0.2.0`, and tag again.
+
 Set the same repository secrets as gloss before publishing:
 
 - `HOMEBREW_TAP_GITHUB_TOKEN`: a token with contents write access to `NimbleTerminal/homebrew-tap`. GitHub supplies `GITHUB_TOKEN` for this repository's release.
