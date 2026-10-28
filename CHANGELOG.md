@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+- The Homebrew cask uses the current macOS requirement syntax, avoiding a
+  deprecation warning during Homebrew upgrades.
 - `ntrecord skill install` prints each path once on a terminal; the bare paths
   go to stdout only when it is redirected, for scripts.
 

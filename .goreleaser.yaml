@@ -102,5 +102,5 @@ homebrew_casks:
         ntrecord skill install
     custom_block: |
       on_macos do
-        depends_on macos: ">= :ventura"
+        depends_on macos: :ventura
       end
