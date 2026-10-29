@@ -2,14 +2,29 @@
 
 ## Unreleased
 
-- Update the terminal engine to Ghostty 1.4.0, including upstream security fixes
-  for Kitty graphics and scrollback handling. Native builds now use Zig 0.17.0.
-- OSC 7501 capability replies now advertise supported status states and kinds.
+## `v0.2.1` (2026-10-29)
+
+### Security
+
+- Update the terminal engine to Ghostty 1.4.0, including upstream fixes for
+  malicious Kitty graphics commands and scrollback memory corruption.
+  See the [Ghostty 1.4.0 security notes](https://ghostty.org/docs/install/release-notes/1-4-0#security).
+
+### Fixed
 
 - The Homebrew cask uses the current macOS requirement syntax, avoiding a
   deprecation warning during Homebrew upgrades.
 - `ntrecord skill install` prints each path once on a terminal; the bare paths
   go to stdout only when it is redirected, for scripts.
+
+### Changed
+
+- OSC 7501 capability replies now advertise supported status states and kinds.
+- Update Go image, system, terminal, and text dependencies.
+
+### Development
+
+- Native builds now use the pinned Zig 0.17.0 toolchain.
 
 ## `v0.2.0` (2026-10-17)
 
