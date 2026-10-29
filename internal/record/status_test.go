@@ -26,8 +26,9 @@ func TestStatusHelper(t *testing.T) {
 	}
 	query := "\x1b]7501;?\x1b\\"
 	fmt.Print(query)
-	buf := make([]byte, len(query))
-	if _, err := io.ReadFull(os.Stdin, buf); err != nil || string(buf) != query {
+	reply := "\x1b]7501;?:states=idle,working,done,blocked,error:kinds=permission,question,auth\x1b\\"
+	buf := make([]byte, len(reply))
+	if _, err := io.ReadFull(os.Stdin, buf); err != nil || string(buf) != reply {
 		panic("missing status capability reply")
 	}
 	fmt.Print("\x1b]7501;state=idle:app=demo\x1b\\")

@@ -21,7 +21,7 @@ func TestProgramStatusProtocol(t *testing.T) {
 	for _, b := range []byte(stream) {
 		write(t, r, string([]byte{b}))
 	}
-	if reply := string(r.TakeReplies()); reply != report("?") {
+	if reply := string(r.TakeReplies()); reply != report("?:states=idle,working,done,blocked,error:kinds=permission,question,auth") {
 		t.Fatalf("reply %q", reply)
 	}
 	want := []ProgramStatus{{ID: "job", State: "blocked", Kind: "question", Progress: 42, App: "agent", Title: "Title", Message: "Hello"}}

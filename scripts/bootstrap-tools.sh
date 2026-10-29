@@ -16,17 +16,17 @@ else
     case "$(uname -s)-$(uname -m)" in
         Darwin-arm64|Darwin-aarch64)
             target=aarch64-macos
-            zig_sha256=b23d70deaa879b5c2d486ed3316f7eaa53e84acf6fc9cc747de152450d401489 ;;
+            zig_sha256=b607e9b9234790a008116ae5bdb71c6243b84b9fb42a53a9e70fde41c06c536a ;;
         Darwin-x86_64)
             target=x86_64-macos
-            zig_sha256=0387557ed1877bc6a2e1802c8391953baddba76081876301c522f52977b52ba7 ;;
+            zig_sha256=4f9a1c5269aa17ebda5e6d3c2b89d6cbf36f7d2b22a0306e9ab98f25f95529c6 ;;
         Linux-aarch64|Linux-arm64)
             target=aarch64-linux
-            zig_sha256=ea4b09bfb22ec6f6c6ceac57ab63efb6b46e17ab08d21f69f3a48b38e1534f17 ;;
+            zig_sha256=9e8d11661d4ae3bd57702a3832781e23ad151dde5798e16a5ccd503f65234ff8 ;;
         Linux-x86_64)
             target=x86_64-linux
-            zig_sha256=70e49664a74374b48b51e6f3fdfbf437f6395d42509050588bd49abe52ba3d00 ;;
-        *) fail 'Automatic Zig setup supports macOS/Linux amd64/arm64. Set ZIG to an existing Zig 0.16.0 executable on other hosts.' ;;
+            zig_sha256=1cbe9df9f27e6b78d14ccbca43b6703a404ef79ef1c463de901d7f088d4e2026 ;;
+        *) fail 'Automatic Zig setup supports macOS/Linux amd64/arm64. Set ZIG to an existing Zig 0.17.0 executable on other hosts.' ;;
     esac
     zig_name="zig-$target-$zig_version"
     if [ ! -x "$tools/$zig_name/zig" ]; then

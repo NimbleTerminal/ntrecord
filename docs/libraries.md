@@ -95,6 +95,7 @@ prompts, and terminal resets follow the protocol. At most 256 records are stored
 evicting the least recently updated when full. Status never alters frame pixels.
 
 Forward `TakeReplies()` to the live process to answer OSC 7501 capability queries.
+The reply lists the supported states and kinds, as provided by Ghostty 1.4.
 After feeding its final output, call `ProgramExited()` to discard working and
 blocked records; idle, done, and error remain. Keep all calls on the renderer's
 own goroutine. Snapshots contain Go-owned values that survive further writes and

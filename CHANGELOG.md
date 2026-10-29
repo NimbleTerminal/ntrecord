@@ -2,6 +2,10 @@
 
 ## Unreleased
 
+- Update the terminal engine to Ghostty 1.4.0, including upstream security fixes
+  for Kitty graphics and scrollback handling. Native builds now use Zig 0.17.0.
+- OSC 7501 capability replies now advertise supported status states and kinds.
+
 - The Homebrew cask uses the current macOS requirement syntax, avoiding a
   deprecation warning during Homebrew upgrades.
 - `ntrecord skill install` prints each path once on a terminal; the bare paths

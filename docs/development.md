@@ -18,7 +18,7 @@ task run -- examples/kitty.tape
 task demo:text
 ```
 
-The first build downloads **Zig 0.16.0** and **pkgconf 2.5.1** (both SHA-256 verified), builds pkgconf and the pinned libghostty-vt, and writes `./ntrecord`. Everything native lives in `.deps/`, which git ignores. Nothing needs sudo, a Homebrew Zig, shell profile changes, or `/tmp`. The first build needs network access and takes a few minutes; later builds reuse what it made. `task deps` runs the native setup on its own and passes Zig build flags after `--`. The build, test, and install tasks run it for you when the library is missing.
+The first build downloads **Zig 0.17.0** and **pkgconf 2.5.1** (both SHA-256 verified), builds pkgconf and the pinned libghostty-vt, and writes `./ntrecord`. Everything native lives in `.deps/`, which git ignores. Nothing needs sudo, a Homebrew Zig, shell profile changes, or `/tmp`. The first build needs network access and takes a few minutes; later builds reuse what it made. `task deps` runs the native setup on its own and passes Zig build flags after `--`. The build, test, and install tasks run it for you when the library is missing.
 
 Task sets `CGO_ENABLED=1`, finds the local pkgconf through `scripts/pkg-config.sh`, and adds the local library to `PKG_CONFIG_PATH`, keeping any path you already have. Without Task:
 
@@ -34,11 +34,11 @@ go run . examples/text.tape
 
 ### Pins
 
-Native setup downloads and builds Ghostty commit `34f39002c6e3974b54e6a6d400bd83777c5ea558` under `.deps/`. The Go binding is pinned in `go.mod` to commit `8812ad0e0f79` (pseudo-version `v0.0.0-20261007030428-8812ad0e0f79`). Its API is unstable, so update the two together. After a bump, run `task terminfo` to regenerate the embedded `xterm-ghostty` terminfo entry from the same Ghostty revision. It needs `tic` from ncurses, and a test fails if the entry and its source disagree.
+Native setup downloads and builds Ghostty 1.4.0 commit `83fb95624b0439ee660c2679b43b38c8b63769cd` under `.deps/`. The Go binding is pinned in `go.mod` to commit `df1957cbff56` (pseudo-version `v0.0.0-20261021212106-df1957cbff56`). The native pin includes the 1.4.0 security fixes and is newer than the Go binding's CMake pin. Its API is unstable, so validate the two together. Run `task deps` after changing the native pin to rebuild an existing installation. After a bump, run `task terminfo` to regenerate the embedded `xterm-ghostty` terminfo entry from the same Ghostty revision. It needs `tic` from ncurses, and a test fails if the entry and its source disagree.
 
 Tool versions, the source revision, and archive checksums are pinned in `scripts/native-common.sh` and `scripts/bootstrap-tools.sh`.
 
-To use an existing matching installation, set `PKG_CONFIG_PATH` to its `share/pkgconfig` directory and `PKG_CONFIG` to your pkg-config executable. `GHOSTTY_PREFIX=/absolute/path` chooses another install prefix. `ZIG=/absolute/path/to/zig` overrides the downloaded compiler, which must report version 0.16.0.
+To use an existing matching installation, set `PKG_CONFIG_PATH` to its `share/pkgconfig` directory and `PKG_CONFIG` to your pkg-config executable. `GHOSTTY_PREFIX=/absolute/path` chooses another install prefix. `ZIG=/absolute/path/to/zig` overrides the downloaded compiler, which must report version 0.17.0.
 
 ### Cleaning
 
