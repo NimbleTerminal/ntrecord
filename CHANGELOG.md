@@ -2,6 +2,23 @@
 
 ## Unreleased
 
+## `v0.3.0` (2026-11-07)
+
+### Changed
+
+- Update the terminal engine and Go binding to `libghostty-vt` 1.0, including
+  single-call cell grapheme and Kitty image queries and C-allocated key event
+  text.
+
+### Development
+
+- Add fuzz targets for `asciicast`, `internal/tape`, `internal/theme`,
+  `gifencode`, and `render` (`task fuzz`, `task fuzz:render`).
+- Native `libghostty-vt` pkg-config files now install under `lib/pkgconfig`
+  instead of `share/pkgconfig`.
+- Update the Go typesetting test-data dependency, GoReleaser 2.20.0, and Hugo
+  0.169.0 in CI.
+
 ## `v0.2.1` (2026-10-29)
 
 ### Security
