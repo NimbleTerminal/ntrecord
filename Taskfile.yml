@@ -8,7 +8,7 @@ env:
   CGO_ENABLED: '1'
   GHOSTTY_PREFIX: '{{.GHOSTTY_PREFIX}}'
   PKG_CONFIG: '{{.PKG_CONFIG | default (printf "%s/scripts/pkg-config.sh" .ROOT_DIR)}}'
-  PKG_CONFIG_PATH: '{{.GHOSTTY_PREFIX}}/share/pkgconfig{{if .PKG_CONFIG_PATH}}:{{.PKG_CONFIG_PATH}}{{end}}'
+  PKG_CONFIG_PATH: '{{.GHOSTTY_PREFIX}}/lib/pkgconfig{{if .PKG_CONFIG_PATH}}:{{.PKG_CONFIG_PATH}}{{end}}'
 
 tasks:
   default:

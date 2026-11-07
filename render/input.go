@@ -102,23 +102,39 @@ func (r *Renderer) encodeKey(key vt.Key, mods vt.Mods, text string, cp rune) ([]
 		return nil, err
 	}
 	defer enc.Close()
-	enc.SetOptFromTerminal(r.term)
-	enc.SetOptOptionAsAlt(vt.OptionAsAltTrue)
+	if err := enc.SetFromTerminal(r.term); err != nil {
+		return nil, err
+	}
+	if err := enc.SetOptionAsAlt(vt.OptionAsAltTrue); err != nil {
+		return nil, err
+	}
 	event, err := vt.NewKeyEvent()
 	if err != nil {
 		return nil, err
 	}
 	defer event.Close()
-	event.SetKey(key)
-	event.SetMods(mods)
-	event.SetUTF8(text)
-	event.SetUnshiftedCodepoint(cp)
-	event.SetAction(vt.KeyActionPress)
+	if err := event.SetKey(key); err != nil {
+		return nil, err
+	}
+	if err := event.SetMods(mods); err != nil {
+		return nil, err
+	}
+	if err := event.SetUTF8(text); err != nil {
+		return nil, err
+	}
+	if err := event.SetUnshiftedCodepoint(cp); err != nil {
+		return nil, err
+	}
+	if err := event.SetAction(vt.KeyActionPress); err != nil {
+		return nil, err
+	}
 	down, err := enc.Encode(event)
 	if err != nil {
 		return nil, err
 	}
-	event.SetAction(vt.KeyActionRelease)
+	if err := event.SetAction(vt.KeyActionRelease); err != nil {
+		return nil, err
+	}
 	up, err := enc.Encode(event)
 	if err != nil {
 		return nil, err
@@ -136,7 +152,9 @@ func (r *Renderer) Paste(text string) ([]byte, error) {
 
 func (r *Renderer) Scroll(delta int) error {
 	r.frame = nil
-	r.term.ScrollViewportDelta(delta)
+	if err := r.term.ScrollViewportDelta(delta); err != nil {
+		return err
+	}
 	return r.snapshotImages()
 }
 

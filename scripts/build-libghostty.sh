@@ -3,7 +3,7 @@ set -eu
 
 root=$(CDPATH= cd -- "$(dirname -- "$0")/.." && pwd)
 . "$root/scripts/native-common.sh"
-# Build the pinned Ghostty release with the project-local toolchain.
+# These pins match the Go binding's CMakeLists.txt. No system installation.
 sh "$root/scripts/bootstrap-tools.sh"
 prefix="${GHOSTTY_PREFIX:-$deps/libghostty-vt}"
 case "$prefix" in /*) ;; *) fail 'GHOSTTY_PREFIX must be an absolute path.' ;; esac
@@ -21,4 +21,4 @@ cd "$deps/ghostty-$ghostty_revision"
 # enclosing ntrecord checkout and mistake our release tag for its own version.
 export GIT_CEILING_DIRECTORIES="$deps"
 ZIG_GLOBAL_CACHE_DIR="$deps/zig-cache" "$zig" build -Demit-lib-vt -Demit-xcframework=false -Doptimize=fast --prefix "$prefix" "$@"
-printf '\nBuilt libghostty-vt. Set PKG_CONFIG_PATH to %s/share/pkgconfig\n' "$prefix"
+printf '\nBuilt libghostty-vt. Set PKG_CONFIG_PATH to %s/lib/pkgconfig\n' "$prefix"

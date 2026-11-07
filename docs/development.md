@@ -25,7 +25,7 @@ Task sets `CGO_ENABLED=1`, finds the local pkgconf through `scripts/pkg-config.s
 ```sh
 sh scripts/build-libghostty.sh
 export PKG_CONFIG="$PWD/scripts/pkg-config.sh"
-export PKG_CONFIG_PATH="$PWD/.deps/libghostty-vt/share/pkgconfig${PKG_CONFIG_PATH:+:$PKG_CONFIG_PATH}"
+export PKG_CONFIG_PATH="$PWD/.deps/libghostty-vt/lib/pkgconfig${PKG_CONFIG_PATH:+:$PKG_CONFIG_PATH}"
 "$PKG_CONFIG" --static --cflags --libs libghostty-vt-static
 CGO_ENABLED=1 go build -o ntrecord .
 go run . examples/kitty.tape
@@ -34,11 +34,11 @@ go run . examples/text.tape
 
 ### Pins
 
-Native setup downloads and builds Ghostty 1.4.0 commit `83fb95624b0439ee660c2679b43b38c8b63769cd` under `.deps/`. The Go binding is pinned in `go.mod` to commit `df1957cbff56` (pseudo-version `v0.0.0-20261021212106-df1957cbff56`). The native pin includes the 1.4.0 security fixes and is newer than the Go binding's CMake pin. Its API is unstable, so validate the two together. Run `task deps` after changing the native pin to rebuild an existing installation. After a bump, run `task terminfo` to regenerate the embedded `xterm-ghostty` terminfo entry from the same Ghostty revision. It needs `tic` from ncurses, and a test fails if the entry and its source disagree.
+Native setup downloads and builds Ghostty commit `5813c9461d5af78b6307a1254d00b1bc190eaccd` (libghostty-vt 1.0) under `.deps/`. The Go binding is pinned in `go.mod` to commit `b13f277ddcb2` (pseudo-version `v0.0.0-20261107144202-b13f277ddcb2`), matching its CMake pin. Update the two together. Run `task deps` after changing the native pin to rebuild an existing installation. After a bump, run `task terminfo` to regenerate the embedded `xterm-ghostty` terminfo entry from the same Ghostty revision. It needs `tic` from ncurses, and a test fails if the entry and its source disagree.
 
 Tool versions, the source revision, and archive checksums are pinned in `scripts/native-common.sh` and `scripts/bootstrap-tools.sh`.
 
-To use an existing matching installation, set `PKG_CONFIG_PATH` to its `share/pkgconfig` directory and `PKG_CONFIG` to your pkg-config executable. `GHOSTTY_PREFIX=/absolute/path` chooses another install prefix. `ZIG=/absolute/path/to/zig` overrides the downloaded compiler, which must report version 0.17.0.
+To use an existing matching installation, set `PKG_CONFIG_PATH` to its `lib/pkgconfig` directory and `PKG_CONFIG` to your pkg-config executable. `GHOSTTY_PREFIX=/absolute/path` chooses another install prefix. `ZIG=/absolute/path/to/zig` overrides the downloaded compiler, which must report version 0.17.0.
 
 ### Cleaning
 
@@ -60,7 +60,7 @@ To cross-build for Linux amd64 from a supported Zig host:
 ```sh
 GHOSTTY_PREFIX="$PWD/.deps/ghostty-linux-amd64" \
   sh scripts/build-libghostty.sh -Dtarget=x86_64-linux-gnu
-PKG_CONFIG_PATH="$PWD/.deps/ghostty-linux-amd64/share/pkgconfig" \
+PKG_CONFIG_PATH="$PWD/.deps/ghostty-linux-amd64/lib/pkgconfig" \
   PKG_CONFIG="$PWD/scripts/pkg-config.sh" \
   CGO_ENABLED=1 GOOS=linux GOARCH=amd64 \
   CC="$PWD/.deps/tools/bin/zig cc -target x86_64-linux-gnu" \
@@ -135,7 +135,7 @@ A new guide page needs a `title` and a `weight` in its front matter, and a link 
 
 As with gloss, GoReleaser publishes archives and checksums to GitHub Releases and a `ntrecord` cask to `NimbleTerminal/homebrew-tap`. Release builds run on macOS with the Command Line Tools SDK. The pinned Zig compiler builds four separate static libghostty-vt archives, one per platform, and cgo links the matching one into each macOS and Linux binary, amd64 and arm64. Target-specific pkg-config paths keep the host library from being linked into a cross-compiled binary. Dependency licenses ship with each archive.
 
-With [GoReleaser](https://goreleaser.com/) 2.16.0 installed:
+With [GoReleaser](https://goreleaser.com/) 2.20.0 installed:
 
 ```sh
 task release-check

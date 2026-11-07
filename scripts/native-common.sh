@@ -1,9 +1,8 @@
 # Shared by the native setup scripts. The caller supplies the repository root.
 zig_version=0.17.0
 pkgconf_version=2.5.1
-# Ghostty v1.4.0; retain the release security fixes when updating the Go binding.
-ghostty_revision=83fb95624b0439ee660c2679b43b38c8b63769cd
-ghostty_sha256=7759929eadaddf602d6fd5ad6b3403d854b91b7083975cd984bb525bc8275187
+ghostty_revision=5813c9461d5af78b6307a1254d00b1bc190eaccd
+ghostty_sha256=c1d0bc5227d024f4b82ee205a647260debd1b700d7b5f390a4c8e8c80362ffb5
 pkgconf_sha256=cd05c9589b9f86ecf044c10a2269822bc9eb001eced2582cfffd658b0a50c243
 deps="$root/.deps"
 

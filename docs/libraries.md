@@ -124,7 +124,7 @@ cd /path/to/ntrecord
 task deps
 export CGO_ENABLED=1
 export PKG_CONFIG="$PWD/scripts/pkg-config.sh"
-export PKG_CONFIG_PATH="$PWD/.deps/libghostty-vt/share/pkgconfig${PKG_CONFIG_PATH:+:$PKG_CONFIG_PATH}"
+export PKG_CONFIG_PATH="$PWD/.deps/libghostty-vt/lib/pkgconfig${PKG_CONFIG_PATH:+:$PKG_CONFIG_PATH}"
 cd /path/to/your/application
 go test ./...
 ```

@@ -280,7 +280,7 @@ func (r *Renderer) snapshotImages() error {
 			if err != nil {
 				return err
 			}
-			if info.DataPending || info.Width == 0 || info.Height == 0 {
+			if info.PixelsPending || info.Width == 0 || info.Height == 0 {
 				continue
 			}
 			// Reuse only owned copies whose content generation hasn't changed.
@@ -295,15 +295,15 @@ func (r *Renderer) snapshotImages() error {
 				} else if info.Format != vt.KittyImageFormatRGBA {
 					continue
 				}
-				if uint64(info.Width)*uint64(info.Height)*uint64(channels) > uint64(len(info.Data)) {
+				if uint64(info.Width)*uint64(info.Height)*uint64(channels) > uint64(len(info.Pixels)) {
 					return fmt.Errorf("short Kitty pixel buffer")
 				}
 				pixels = image.NewNRGBA(image.Rect(0, 0, int(info.Width), int(info.Height)))
 				if channels == 4 {
-					copy(pixels.Pix, info.Data)
+					copy(pixels.Pix, info.Pixels)
 				} else {
 					for src, dst := 0, 0; dst < len(pixels.Pix); src, dst = src+3, dst+4 {
-						copy(pixels.Pix[dst:dst+3], info.Data[src:src+3])
+						copy(pixels.Pix[dst:dst+3], info.Pixels[src:src+3])
 						pixels.Pix[dst+3] = 255
 					}
 				}
@@ -478,9 +478,9 @@ func (r *Renderer) FrameAt(now time.Time) (*image.RGBA, error) {
 		x, y := int(cursor.ViewportX)*r.CellWidth, int(cursor.ViewportY)*r.CellHeight
 		rect := image.Rect(x, y, x+r.CellWidth, y+r.CellHeight)
 		switch cursor.VisualStyle {
-		case vt.CursorVisualStyleBar:
+		case vt.CursorStyleBar:
 			rect.Max.X = x + 2
-		case vt.CursorVisualStyleUnderline:
+		case vt.CursorStyleUnderline:
 			rect.Min.Y = rect.Max.Y - 2
 		}
 		c := rgb(colors.Foreground)

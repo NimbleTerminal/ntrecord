@@ -19,7 +19,7 @@ task test:golden                            # renderer golden-frame hashes (see 
 task demos                                  # record example GIFs
 ```
 
-To test one package, run `go` directly. It needs cgo and the local pkg-config, which Task otherwise sets: `PKG_CONFIG=$PWD/scripts/pkg-config.sh PKG_CONFIG_PATH=$PWD/.deps/libghostty-vt/share/pkgconfig CGO_ENABLED=1 go test -run TestName ./internal/tape`.
+To test one package, run `go` directly. It needs cgo and the local pkg-config, which Task otherwise sets: `PKG_CONFIG=$PWD/scripts/pkg-config.sh PKG_CONFIG_PATH=$PWD/.deps/libghostty-vt/lib/pkgconfig CGO_ENABLED=1 go test -run TestName ./internal/tape`.
 
 ## Architecture
 
