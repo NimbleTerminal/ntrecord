@@ -1,0 +1,35 @@
+name: fuzz
+on:
+  schedule:
+    - cron: '23 4 * * 1' # Mondays
+  workflow_dispatch:
+    inputs:
+      fuzztime:
+        description: Time to fuzz each target
+        default: 60s
+permissions:
+  contents: read
+jobs:
+  fuzz:
+    name: Fuzz parsers and encoders
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          persist-credentials: false
+      - uses: actions/setup-go@v7
+        with:
+          go-version-file: go.mod
+      - uses: go-task/setup-task@v2
+        with:
+          version: 3.54.0
+      - name: Fuzz each target
+        run: task fuzz FUZZTIME="${{ inputs.fuzztime || '60s' }}"
+      - name: Keep the crashing inputs
+        if: failure()
+        uses: actions/upload-artifact@v7
+        with:
+          name: fuzz-crashers
+          path: '**/testdata/fuzz'
+          if-no-files-found: ignore

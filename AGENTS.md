@@ -16,6 +16,8 @@ task ci                                     # what CI runs: fmt-check, tidy/veri
 task fmt                                    # gofmt over the listed source dirs
 task test:video                             # requires ffmpeg/ffprobe; video tests otherwise skip locally
 task test:golden                            # renderer golden-frame hashes (see below)
+task fuzz                                   # fuzz pure-Go parsers and encoders (FUZZTIME=10s)
+task fuzz:render                            # fuzz libghostty-vt renderer targets (FUZZTIME=10s)
 task demos                                  # record example GIFs
 ```
 

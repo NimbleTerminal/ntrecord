@@ -111,20 +111,21 @@ type parser struct {
 	stack      map[string]bool
 	bytes      int
 	dimensions map[string]bool
+	open       func(string) (io.ReadCloser, error)
 }
 
-func Parse(r io.Reader) (*Tape, error) { return parse(r, "<tape>") }
+func Parse(r io.Reader) (*Tape, error) { return parse(r, "<tape>", nil) }
 func ParseFile(path string) (*Tape, error) {
 	f, err := os.Open(path)
 	if err != nil {
 		return nil, err
 	}
 	defer f.Close()
-	return parse(f, path)
+	return parse(f, path, nil)
 }
-func parse(r io.Reader, name string) (*Tape, error) {
+func parse(r io.Reader, name string, open func(string) (io.ReadCloser, error)) (*Tape, error) {
 	c := DefaultConfig()
-	p := &parser{tape: &Tape{Config: c}, speed: c.TypingSpeed, stack: make(map[string]bool), dimensions: make(map[string]bool)}
+	p := &parser{tape: &Tape{Config: c}, speed: c.TypingSpeed, stack: make(map[string]bool), dimensions: make(map[string]bool), open: open}
 	if err := p.read(r, name, false); err != nil {
 		return nil, err
 	}
@@ -132,9 +133,12 @@ func parse(r io.Reader, name string) (*Tape, error) {
 }
 
 func (p *parser) read(r io.Reader, name string, sourced bool) error {
-	abs, _ := filepath.Abs(name)
-	if resolved, err := filepath.EvalSymlinks(abs); err == nil {
-		abs = resolved
+	abs := filepath.Clean(name)
+	if p.open == nil {
+		abs, _ = filepath.Abs(name)
+		if resolved, err := filepath.EvalSymlinks(abs); err == nil {
+			abs = resolved
+		}
 	}
 	if p.stack[abs] || len(p.stack) >= 32 {
 		return fmt.Errorf("%s: Source cycle or nesting exceeds 32 files", name)
@@ -216,7 +220,11 @@ func (p *parser) read(r io.Reader, name string, sourced bool) error {
 				return fail(e)
 			}
 			// VHS paths resolve from the invocation directory, including nested sources.
-			f, e := os.Open(v)
+			open := p.open
+			if open == nil {
+				open = func(path string) (io.ReadCloser, error) { return os.Open(path) }
+			}
+			f, e := open(v)
 			if e != nil {
 				return fail(e)
 			}

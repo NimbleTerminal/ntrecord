@@ -116,6 +116,34 @@ tasks:
     desc: Run tests with race detection
     deps: [native-check]
     cmds: ['go test -mod=readonly -race {{.CLI_ARGS}} ./...']
+  fuzz:
+    desc: Fuzz each parser and encoder target in turn (FUZZTIME=10s by default)
+    vars:
+      FUZZTIME: '{{.FUZZTIME | default "10s"}}'
+    cmds:
+      - |
+        for pair in \
+          ./asciicast:FuzzReader \
+          ./asciicast:FuzzWriterUTF8 \
+          ./internal/tape:FuzzParse \
+          ./internal/theme:FuzzParse \
+          ./gifencode:FuzzEncode; do
+          pkg=${pair%:*}
+          name=${pair#*:}
+          echo "=== $pkg $name ({{.FUZZTIME}}) ==="
+          CGO_ENABLED=0 GOMAXPROCS=1 go test -mod=readonly -parallel=1 -run="^${name}$" -fuzz="^${name}$" -fuzztime={{.FUZZTIME}} "$pkg"
+        done
+  fuzz:render:
+    desc: Fuzz the libghostty-vt renderer targets (FUZZTIME=10s by default)
+    deps: [native-check]
+    vars:
+      FUZZTIME: '{{.FUZZTIME | default "10s"}}'
+    cmds:
+      - |
+        for name in FuzzWriteAndFrame FuzzKey; do
+          echo "=== ./render $name ({{.FUZZTIME}}) ==="
+          GOMAXPROCS=1 go test -mod=readonly -tags=libghostty_fuzz -parallel=1 -run="^${name}$" -fuzz="^${name}$" -fuzztime={{.FUZZTIME}} ./render
+        done
   vet:
     desc: Run Go static checks
     deps: [native-check]

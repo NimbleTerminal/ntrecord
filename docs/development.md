@@ -77,6 +77,8 @@ task test
 task ci
 task demos
 task test:video  # needs ffmpeg and ffprobe; never skips video tests silently
+task fuzz        # fuzz pure-Go parsers and encoders (FUZZTIME=10s by default)
+task fuzz:render # fuzz libghostty-vt renderer targets (FUZZTIME=10s by default)
 task demo:video
 task demo:language
 ```

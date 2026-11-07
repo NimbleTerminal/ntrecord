@@ -6,8 +6,10 @@ import (
 	"encoding/json"
 	"fmt"
 	"image/color"
+	"maps"
 	"strconv"
 	"strings"
+	"sync"
 )
 
 // Themes are data from Charm's VHS, revision
@@ -15,6 +17,12 @@ import (
 //
 //go:embed themes.json
 var data []byte
+
+var catalog = sync.OnceValues(func() ([]Theme, error) {
+	var all []Theme
+	err := json.Unmarshal(data, &all)
+	return all, err
+})
 
 type Theme map[string]string
 
@@ -47,13 +55,13 @@ func Parse(s string) (Theme, error) {
 			return nil, err
 		}
 	} else {
-		var all []Theme
-		if err := json.Unmarshal(data, &all); err != nil {
+		all, err := catalog()
+		if err != nil {
 			return nil, err
 		}
 		for _, candidate := range all {
 			if strings.EqualFold(candidate["name"], s) {
-				t = candidate
+				t = maps.Clone(candidate)
 				break
 			}
 		}
