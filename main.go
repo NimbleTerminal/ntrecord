@@ -139,6 +139,7 @@ func run(args []string, stdout, stderr io.Writer) error {
 		}
 		opts.Command, opts.Input, opts.Output = fs.Args(), os.Stdin, stdout
 		if term.IsTerminal(int(os.Stdin.Fd())) {
+			opts.StopOnDoubleInterrupt = true
 			state, err := term.MakeRaw(int(os.Stdin.Fd()))
 			if err != nil {
 				return err

@@ -30,9 +30,12 @@ type Options struct {
 	Command []string
 	// A non-nil Tape selects scripted mode, even when it contains no actions.
 	Tape *tape.Tape
-	// Live input/output are forwarded unchanged to/from the PTY.
+	// Live input/output are forwarded to/from the PTY.
 	Input  io.Reader
 	Output io.Writer
+	// StopOnDoubleInterrupt enables the live terminal shortcut: two consecutive
+	// Ctrl-C bytes within one second stop and save. The first is forwarded.
+	StopOnDoubleInterrupt bool
 	// Warn receives advice about a recording that may not have captured what the
 	// author meant, such as a deterministic tape that ended before its program
 	// stopped drawing. Nil discards it.
@@ -452,6 +455,7 @@ func Run(parent context.Context, opts Options) error {
 	// is still applied: capped runs that many more output events first.
 	var capped func()
 	cappedEvents := 0
+	var interrupt liveInterrupt
 	for !finished {
 		if capped != nil && cappedEvents <= 0 {
 			f := capped
@@ -474,6 +478,10 @@ func Run(parent context.Context, opts Options) error {
 			queue[0] = writeRequest{}
 			queue = queue[1:]
 		case b := <-input:
+			if opts.StopOnDoubleInterrupt && interrupt.stop(b, time.Now()) {
+				finished = true
+				continue
+			}
 			if err := enqueue(writeRequest{data: b}); err != nil {
 				runErr, finished = err, true
 			}

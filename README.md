@@ -163,7 +163,7 @@ ntrecord record -o session.gif -cols 100 -rows 30
 ntrecord record -o command.gif -- sh -c 'printf "hello\n"; sleep 2'
 ```
 
-`record` starts a new PTY running your shell, or the command you give, and connects your terminal to it. Exit the shell (or press Ctrl-D) to finish and write the recording. Ctrl-C goes to the program you are running when stdin is a terminal. SIGTERM stops the recording and saves the frames captured so far. Your terminal mode is restored on exit. It cannot attach to a process that is already running.
+`record` starts a new PTY running your shell, or the command you give, and connects your terminal to it. Exit the shell (or press Ctrl-D) to finish and write the recording. A single Ctrl-C goes to the program you are running. Press Ctrl-C twice consecutively within one second to stop and save when stdin is a terminal. SIGTERM stops the recording and saves the frames captured so far. Your terminal mode is restored on exit. It cannot attach to a process that is already running.
 
 The recorded window keeps the size you asked for. Limits and failure behavior:
 

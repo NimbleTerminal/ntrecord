@@ -32,7 +32,7 @@ ntrecord record -o build.mp4 -- sh -c 'make; sleep 2'    # a short pause at the 
 The format comes from the file name: `.gif`, `.mp4` (needs FFmpeg), or `.webm` (needs FFmpeg). See [Output formats](../formats/).
 
 > [!NOTE]
-> The shell is `sh` by default, started with a plain `$ ` prompt. Ctrl-C reaches the program you are running; it does not stop the recording.
+> The shell is `sh` by default, started with a plain `$ ` prompt. A single Ctrl-C reaches the program you are running. Press Ctrl-C twice consecutively within one second to stop and save the recording.
 
 ## Make it repeatable with a tape
 

@@ -120,6 +120,9 @@ ntrecord record -o session.cast -- ./my-tui          # events, re-renderable
 ntrecord render session.cast -o s.mp4 -fps 30 -speed 2 -theme "Dracula"
 ```
 
+- With live terminal input, a single Ctrl-C reaches the program; two consecutive
+  presses within one second stop and save the recording. `exit` or Ctrl-D at an
+  empty shell prompt also finishes recording. Piped input is forwarded unchanged.
 - The recording ends when the command does; add a trailing pause by wrapping
   it in a script that sleeps. `record` also echoes the program's output to
   stdout.

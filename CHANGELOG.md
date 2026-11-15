@@ -2,6 +2,11 @@
 
 ## Unreleased
 
+### Added
+
+- Press Ctrl-C twice within one second during a live terminal recording to stop
+  and save it. A single Ctrl-C still interrupts the recorded program.
+
 ## `v0.3.0` (2026-11-07)
 
 ### Changed
